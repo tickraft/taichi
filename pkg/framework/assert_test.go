@@ -387,12 +387,15 @@ func TestIsWholeFloat(t *testing.T) {
 		{"fractional", 3.14, false},
 		{"negative fractional", -1.5, false},
 		{"NaN", math.NaN(), false},
-		// 2^64 is well beyond int64 range; the guard catches it because the float64
-		// representation of the untyped constant 1<<63-1 rounds to 2^63, so values at
-		// exactly 2^63 slip through on some platforms. Using 2^64 avoids that boundary.
+		// 2^64 is well beyond int64 range.
+		// Note: 1<<63-1 cannot be used here because it rounds to 2^63 in float64,
+		// and the int64(2^63) overflow conversion is implementation-defined per
+		// the Go spec (saturates to MaxInt64 on some platforms, wraps to MinInt64
+		// on others), making the result non-portable. 1<<62 is the largest power
+		// of two safely inside int64 range and exactly representable as float64.
 		{"large beyond int64", math.Pow(2, 64), false},
 		{"large negative beyond int64", -math.Pow(2, 64), false},
-		{"max int64 representable", float64(1<<63 - 1), true},
+		{"large int64 representable", float64(1 << 62), true},
 	}
 	for _, c := range cases {
 		c := c

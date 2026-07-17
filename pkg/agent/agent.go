@@ -98,6 +98,11 @@ func (c *CLIInvoker) AnalyzeAndFix(ctx context.Context, fc *failure.Context) (*F
 	if c.WorkDir != "" {
 		cmd.Dir = c.WorkDir
 	}
+	// WaitDelay ensures cmd.Run returns promptly after the context kills the
+	// process, even when orphaned children (e.g. `sleep` spawned by /bin/sh)
+	// inherit the stdout/stderr pipes and keep them open. Without it, cmd.Run
+	// blocks until those children exit naturally, defeating the timeout.
+	cmd.WaitDelay = 2 * time.Second
 
 	input, err := json.Marshal(fc)
 	if err != nil {
