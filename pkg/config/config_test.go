@@ -438,7 +438,7 @@ func TestValidate(t *testing.T) {
 			Envs: map[string]Env{
 				"backend": {Kind: EnvKindBackendGo},
 			},
-			Skills: []skill.SkillConfig{
+			Skills: []skill.Config{
 				{Name: "api", Kind: skill.KindAPI},
 				{Name: "static", Kind: skill.KindStatic},
 			},
@@ -477,7 +477,7 @@ func TestValidate(t *testing.T) {
 
 	t.Run("skill with empty name", func(t *testing.T) {
 		cfg := &Config{
-			Skills: []skill.SkillConfig{
+			Skills: []skill.Config{
 				{Name: ""},
 			},
 		}
@@ -489,7 +489,7 @@ func TestValidate(t *testing.T) {
 
 	t.Run("duplicate skill names", func(t *testing.T) {
 		cfg := &Config{
-			Skills: []skill.SkillConfig{
+			Skills: []skill.Config{
 				{Name: "api", Kind: skill.KindAPI},
 				{Name: "api", Kind: skill.KindAPI},
 			},
@@ -552,7 +552,7 @@ func TestProjectByName(t *testing.T) {
 // TestSkillConfigsByName verifies the name-to-config map returned by SkillConfigsByName.
 func TestSkillConfigsByName(t *testing.T) {
 	cfg := &Config{
-		Skills: []skill.SkillConfig{
+		Skills: []skill.Config{
 			{Name: "api", Kind: skill.KindAPI, Enabled: true, Priority: skill.PriorityCritical},
 			{Name: "static", Kind: skill.KindStatic, Enabled: false, Priority: skill.PriorityNormal},
 		},

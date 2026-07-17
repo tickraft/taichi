@@ -36,27 +36,27 @@ type mockSkill struct {
 	configErr     error
 	setupErr      error
 	teardownErr   error
-	runFn         func(ctx *skill.SkillContext) skill.SkillResult
+	runFn         func(ctx *skill.Context) skill.Result
 	setupCount    int
 	runCount      int
 	teardownCount int
 	configCount   int
 	mu            sync.Mutex
-	lastCtx       *skill.SkillContext
+	lastCtx       *skill.Context
 }
 
 func (m *mockSkill) Name() string             { return m.name }
 func (m *mockSkill) Kind() skill.Kind         { return m.kind }
 func (m *mockSkill) Priority() skill.Priority { return m.priority }
 
-func (m *mockSkill) Configure(skill.SkillConfig) error {
+func (m *mockSkill) Configure(skill.Config) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.configCount++
 	return m.configErr
 }
 
-func (m *mockSkill) Setup(ctx *skill.SkillContext) error {
+func (m *mockSkill) Setup(ctx *skill.Context) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.setupCount++
@@ -64,7 +64,7 @@ func (m *mockSkill) Setup(ctx *skill.SkillContext) error {
 	return m.setupErr
 }
 
-func (m *mockSkill) Run(ctx *skill.SkillContext) skill.SkillResult {
+func (m *mockSkill) Run(ctx *skill.Context) skill.Result {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.runCount++
@@ -72,10 +72,10 @@ func (m *mockSkill) Run(ctx *skill.SkillContext) skill.SkillResult {
 	if m.runFn != nil {
 		return m.runFn(ctx)
 	}
-	return skill.SkillResult{SkillName: m.name}
+	return skill.Result{SkillName: m.name}
 }
 
-func (m *mockSkill) Teardown(*skill.SkillContext) error {
+func (m *mockSkill) Teardown(*skill.Context) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.teardownCount++
@@ -90,10 +90,10 @@ type mockInvoker struct {
 	sideEffect func()
 	calls      int
 	mu         sync.Mutex
-	captured   []*failure.FailureContext
+	captured   []*failure.Context
 }
 
-func (m *mockInvoker) AnalyzeAndFix(ctx context.Context, fc *failure.FailureContext) (*agent.FixResult, error) {
+func (m *mockInvoker) AnalyzeAndFix(ctx context.Context, fc *failure.Context) (*agent.FixResult, error) {
 	m.mu.Lock()
 	idx := m.calls
 	m.calls++
@@ -177,15 +177,6 @@ func newMockSkill(name string) *mockSkill {
 		kind:     skill.KindAPI,
 		priority: skill.PriorityNormal,
 	}
-}
-
-// namesOfSkills extracts the Name() of each skill into a slice.
-func namesOfSkills(in []skill.TestSkill) []string {
-	out := make([]string, 0, len(in))
-	for _, s := range in {
-		out = append(out, s.Name())
-	}
-	return out
 }
 
 // ---------------------------------------------------------------------------
@@ -337,7 +328,7 @@ func TestSelectProject(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestBuildSkillConfigs(t *testing.T) {
-	allSkills := []skill.SkillConfig{
+	allSkills := []skill.Config{
 		{Name: "api", Enabled: true},
 		{Name: "ui", Enabled: true},
 		{Name: "static", Enabled: true},
@@ -415,7 +406,7 @@ func TestBuildSkillConfigs(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestFindSkillConfigs(t *testing.T) {
-	cfgs := []skill.SkillConfig{
+	cfgs := []skill.Config{
 		{Name: "api", Enabled: true},
 		{Name: "ui", Enabled: false},
 	}
@@ -591,7 +582,7 @@ func TestFixEngineAdapter_Apply(t *testing.T) {
 
 func TestRegisterPluginSkills(t *testing.T) {
 	o := New()
-	cfgs := []skill.SkillConfig{
+	cfgs := []skill.Config{
 		{Name: "plugin-a", Kind: skill.KindPlugin, Enabled: true, Raw: map[string]any{"command": "echo"}},
 		{Name: "plugin-b", Kind: skill.KindAPI, Enabled: true},
 		{Name: "plugin-c", Kind: skill.KindPlugin, Enabled: false},
@@ -621,7 +612,7 @@ func TestRegisterPluginSkills_AlreadyRegistered(t *testing.T) {
 	if err := o.Registry().Register(pre, false); err != nil {
 		t.Fatalf("pre-register: %v", err)
 	}
-	cfgs := []skill.SkillConfig{
+	cfgs := []skill.Config{
 		{Name: "my-plugin", Kind: skill.KindPlugin, Enabled: true, Raw: map[string]any{"command": "echo"}},
 	}
 	if err := o.registerPluginSkills(cfgs, skill.NoOpLogger{}); err != nil {
@@ -793,12 +784,12 @@ func TestRun_Success_NoEnv(t *testing.T) {
 		name:     "api",
 		kind:     skill.KindAPI,
 		priority: skill.PriorityNormal,
-		runFn: func(ctx *skill.SkillContext) skill.SkillResult {
+		runFn: func(ctx *skill.Context) skill.Result {
 			ctx.Reporter.Record(framework.TestResult{
 				Name:   "case-1",
 				Passed: true,
 			})
-			return skill.SkillResult{SkillName: "api"}
+			return skill.Result{SkillName: "api"}
 		},
 	}
 	o := New()
@@ -859,13 +850,13 @@ func TestRun_EnvWithBaseURL(t *testing.T) {
 	var skillBaseURL string
 	s := &mockSkill{
 		name: "api",
-		runFn: func(ctx *skill.SkillContext) skill.SkillResult {
+		runFn: func(ctx *skill.Context) skill.Result {
 			skillBaseURL = ctx.BaseURL
 			ctx.Reporter.Record(framework.TestResult{
 				Name:   "base-url-check",
 				Passed: ctx.BaseURL == server.URL,
 			})
-			return skill.SkillResult{SkillName: "api"}
+			return skill.Result{SkillName: "api"}
 		},
 	}
 	o := New()
@@ -912,12 +903,12 @@ func TestRun_SkillExecutionOrder(t *testing.T) {
 		return &mockSkill{
 			name:     name,
 			priority: prio,
-			runFn: func(ctx *skill.SkillContext) skill.SkillResult {
+			runFn: func(ctx *skill.Context) skill.Result {
 				mu.Lock()
 				order = append(order, name)
 				mu.Unlock()
 				ctx.Reporter.Record(framework.TestResult{Name: name, Passed: true})
-				return skill.SkillResult{SkillName: name}
+				return skill.Result{SkillName: name}
 			},
 		}
 	}
@@ -965,19 +956,19 @@ func TestRun_ReportAggregation(t *testing.T) {
 	// Skill 1 records 2 passing cases.
 	s1 := &mockSkill{
 		name: "skill-a",
-		runFn: func(ctx *skill.SkillContext) skill.SkillResult {
+		runFn: func(ctx *skill.Context) skill.Result {
 			ctx.Reporter.Record(framework.TestResult{Name: "a-1", Passed: true})
 			ctx.Reporter.Record(framework.TestResult{Name: "a-2", Passed: true})
-			return skill.SkillResult{SkillName: "skill-a"}
+			return skill.Result{SkillName: "skill-a"}
 		},
 	}
 	// Skill 2 records 1 passing, 1 failing case.
 	s2 := &mockSkill{
 		name: "skill-b",
-		runFn: func(ctx *skill.SkillContext) skill.SkillResult {
+		runFn: func(ctx *skill.Context) skill.Result {
 			ctx.Reporter.Record(framework.TestResult{Name: "b-1", Passed: true})
 			ctx.Reporter.Record(framework.TestResult{Name: "b-2", Passed: false, Message: "fail"})
-			return skill.SkillResult{SkillName: "skill-b"}
+			return skill.Result{SkillName: "skill-b"}
 		},
 	}
 	o := New()
@@ -1022,9 +1013,9 @@ func TestRun_SkillConfigureError_SkipsSkill(t *testing.T) {
 	}
 	good := &mockSkill{
 		name: "good-skill",
-		runFn: func(ctx *skill.SkillContext) skill.SkillResult {
+		runFn: func(ctx *skill.Context) skill.Result {
 			ctx.Reporter.Record(framework.TestResult{Name: "ok", Passed: true})
-			return skill.SkillResult{SkillName: "good-skill"}
+			return skill.Result{SkillName: "good-skill"}
 		},
 	}
 	o := New()
@@ -1072,9 +1063,9 @@ func TestRun_SkillSetupError_SkipsSkill(t *testing.T) {
 	}
 	good := &mockSkill{
 		name: "good-skill",
-		runFn: func(ctx *skill.SkillContext) skill.SkillResult {
+		runFn: func(ctx *skill.Context) skill.Result {
 			ctx.Reporter.Record(framework.TestResult{Name: "ok", Passed: true})
-			return skill.SkillResult{SkillName: "good-skill"}
+			return skill.Result{SkillName: "good-skill"}
 		},
 	}
 	o := New()
@@ -1118,8 +1109,8 @@ func TestRun_SkillRunError_RecordsResult(t *testing.T) {
 	runErr := errors.New("skill execution failed")
 	s := &mockSkill{
 		name: "error-skill",
-		runFn: func(ctx *skill.SkillContext) skill.SkillResult {
-			return skill.SkillResult{
+		runFn: func(ctx *skill.Context) skill.Result {
+			return skill.Result{
 				SkillName: "error-skill",
 				Error:     runErr,
 			}
@@ -1155,9 +1146,9 @@ func TestRun_SkillTeardownError_Continues(t *testing.T) {
 	s := &mockSkill{
 		name:        "test-skill",
 		teardownErr: errors.New("teardown failed"),
-		runFn: func(ctx *skill.SkillContext) skill.SkillResult {
+		runFn: func(ctx *skill.Context) skill.Result {
 			ctx.Reporter.Record(framework.TestResult{Name: "ok", Passed: true})
-			return skill.SkillResult{SkillName: "test-skill"}
+			return skill.Result{SkillName: "test-skill"}
 		},
 	}
 	o := New()
@@ -1186,9 +1177,9 @@ skills:
 func TestRun_ReportsDir_Override(t *testing.T) {
 	s := &mockSkill{
 		name: "api",
-		runFn: func(ctx *skill.SkillContext) skill.SkillResult {
+		runFn: func(ctx *skill.Context) skill.Result {
 			ctx.Reporter.Record(framework.TestResult{Name: "ok", Passed: true})
-			return skill.SkillResult{SkillName: "api"}
+			return skill.Result{SkillName: "api"}
 		},
 	}
 	o := New()
@@ -1220,9 +1211,9 @@ skills:
 func TestRun_ReportsDir_FromConfig(t *testing.T) {
 	s := &mockSkill{
 		name: "api",
-		runFn: func(ctx *skill.SkillContext) skill.SkillResult {
+		runFn: func(ctx *skill.Context) skill.Result {
 			ctx.Reporter.Record(framework.TestResult{Name: "ok", Passed: true})
-			return skill.SkillResult{SkillName: "api"}
+			return skill.Result{SkillName: "api"}
 		},
 	}
 	o := New()
@@ -1254,9 +1245,9 @@ skills:
 func TestRun_SuiteName_FromConfig(t *testing.T) {
 	s := &mockSkill{
 		name: "api",
-		runFn: func(ctx *skill.SkillContext) skill.SkillResult {
+		runFn: func(ctx *skill.Context) skill.Result {
 			ctx.Reporter.Record(framework.TestResult{Name: "ok", Passed: true})
-			return skill.SkillResult{SkillName: "api"}
+			return skill.Result{SkillName: "api"}
 		},
 	}
 	o := New()
@@ -1328,9 +1319,9 @@ func TestRun_LoggerOption(t *testing.T) {
 	logger := &captureLogger{}
 	s := &mockSkill{
 		name: "api",
-		runFn: func(ctx *skill.SkillContext) skill.SkillResult {
+		runFn: func(ctx *skill.Context) skill.Result {
 			ctx.Reporter.Record(framework.TestResult{Name: "ok", Passed: true})
-			return skill.SkillResult{SkillName: "api"}
+			return skill.Result{SkillName: "api"}
 		},
 	}
 	o := New()
@@ -1422,9 +1413,9 @@ func TestRunCopilot_RunError(t *testing.T) {
 func TestRunCopilot_NoFailures(t *testing.T) {
 	s := &mockSkill{
 		name: "api",
-		runFn: func(ctx *skill.SkillContext) skill.SkillResult {
+		runFn: func(ctx *skill.Context) skill.Result {
 			ctx.Reporter.Record(framework.TestResult{Name: "case-1", Passed: true})
-			return skill.SkillResult{SkillName: "api"}
+			return skill.Result{SkillName: "api"}
 		},
 	}
 	o := New()
@@ -1458,9 +1449,9 @@ skills:
 func TestRunCopilot_NoInvoker_DegradesToNormalRun(t *testing.T) {
 	s := &mockSkill{
 		name: "api",
-		runFn: func(ctx *skill.SkillContext) skill.SkillResult {
+		runFn: func(ctx *skill.Context) skill.Result {
 			ctx.Reporter.Record(framework.TestResult{Name: "case-1", Passed: false, Message: "fail"})
-			return skill.SkillResult{SkillName: "api"}
+			return skill.Result{SkillName: "api"}
 		},
 	}
 	o := New()
@@ -1507,7 +1498,7 @@ func TestRunCopilot_AgentFixesFirstRound(t *testing.T) {
 	runCount := 0
 	s := &mockSkill{
 		name: "api",
-		runFn: func(ctx *skill.SkillContext) skill.SkillResult {
+		runFn: func(ctx *skill.Context) skill.Result {
 			runCount++
 			if runCount == 1 {
 				ctx.Reporter.Record(framework.TestResult{
@@ -1521,7 +1512,7 @@ func TestRunCopilot_AgentFixesFirstRound(t *testing.T) {
 					Passed: true,
 				})
 			}
-			return skill.SkillResult{SkillName: "api"}
+			return skill.Result{SkillName: "api"}
 		},
 	}
 	o := New()
@@ -1581,13 +1572,13 @@ skills:
 func TestRunCopilot_AgentCannotFix(t *testing.T) {
 	s := &mockSkill{
 		name: "api",
-		runFn: func(ctx *skill.SkillContext) skill.SkillResult {
+		runFn: func(ctx *skill.Context) skill.Result {
 			ctx.Reporter.Record(framework.TestResult{
 				Name:    "case-1",
 				Passed:  false,
 				Message: "fail",
 			})
-			return skill.SkillResult{SkillName: "api"}
+			return skill.Result{SkillName: "api"}
 		},
 	}
 	o := New()
@@ -1632,12 +1623,12 @@ skills:
 func TestRunCopilot_AgentError(t *testing.T) {
 	s := &mockSkill{
 		name: "api",
-		runFn: func(ctx *skill.SkillContext) skill.SkillResult {
+		runFn: func(ctx *skill.Context) skill.Result {
 			ctx.Reporter.Record(framework.TestResult{
 				Name:   "case-1",
 				Passed: false,
 			})
-			return skill.SkillResult{SkillName: "api"}
+			return skill.Result{SkillName: "api"}
 		},
 	}
 	o := New()
@@ -1680,12 +1671,12 @@ skills:
 func TestRunCopilot_ApplyError(t *testing.T) {
 	s := &mockSkill{
 		name: "api",
-		runFn: func(ctx *skill.SkillContext) skill.SkillResult {
+		runFn: func(ctx *skill.Context) skill.Result {
 			ctx.Reporter.Record(framework.TestResult{
 				Name:   "case-1",
 				Passed: false,
 			})
-			return skill.SkillResult{SkillName: "api"}
+			return skill.Result{SkillName: "api"}
 		},
 	}
 	o := New()
@@ -1741,12 +1732,12 @@ func TestRunCopilot_MaxRoundsExhausted(t *testing.T) {
 	// Mock skill always fails.
 	s := &mockSkill{
 		name: "api",
-		runFn: func(ctx *skill.SkillContext) skill.SkillResult {
+		runFn: func(ctx *skill.Context) skill.Result {
 			ctx.Reporter.Record(framework.TestResult{
 				Name:   "case-1",
 				Passed: false,
 			})
-			return skill.SkillResult{SkillName: "api"}
+			return skill.Result{SkillName: "api"}
 		},
 	}
 	o := New()
@@ -1804,12 +1795,12 @@ func TestRunCopilot_DefaultMaxRounds(t *testing.T) {
 
 	s := &mockSkill{
 		name: "api",
-		runFn: func(ctx *skill.SkillContext) skill.SkillResult {
+		runFn: func(ctx *skill.Context) skill.Result {
 			ctx.Reporter.Record(framework.TestResult{
 				Name:   "case-1",
 				Passed: false,
 			})
-			return skill.SkillResult{SkillName: "api"}
+			return skill.Result{SkillName: "api"}
 		},
 	}
 	o := New()
@@ -1860,12 +1851,12 @@ func TestRunCopilot_RegressionRunError(t *testing.T) {
 
 	s := &mockSkill{
 		name: "api",
-		runFn: func(ctx *skill.SkillContext) skill.SkillResult {
+		runFn: func(ctx *skill.Context) skill.Result {
 			ctx.Reporter.Record(framework.TestResult{
 				Name:   "case-1",
 				Passed: false,
 			})
-			return skill.SkillResult{SkillName: "api"}
+			return skill.Result{SkillName: "api"}
 		},
 	}
 	o := New()
@@ -1919,7 +1910,7 @@ func TestRunCopilot_DirectMode_VerifiesModifiedFiles(t *testing.T) {
 	runCount := 0
 	s := &mockSkill{
 		name: "api",
-		runFn: func(ctx *skill.SkillContext) skill.SkillResult {
+		runFn: func(ctx *skill.Context) skill.Result {
 			runCount++
 			if runCount == 1 {
 				ctx.Reporter.Record(framework.TestResult{
@@ -1932,7 +1923,7 @@ func TestRunCopilot_DirectMode_VerifiesModifiedFiles(t *testing.T) {
 					Passed: true,
 				})
 			}
-			return skill.SkillResult{SkillName: "api"}
+			return skill.Result{SkillName: "api"}
 		},
 	}
 	o := New()
@@ -2013,7 +2004,7 @@ func TestRunCopilot_PatchModeSuccess(t *testing.T) {
 	runCount := 0
 	s := &mockSkill{
 		name: "api",
-		runFn: func(ctx *skill.SkillContext) skill.SkillResult {
+		runFn: func(ctx *skill.Context) skill.Result {
 			runCount++
 			if runCount == 1 {
 				ctx.Reporter.Record(framework.TestResult{
@@ -2026,7 +2017,7 @@ func TestRunCopilot_PatchModeSuccess(t *testing.T) {
 					Passed: true,
 				})
 			}
-			return skill.SkillResult{SkillName: "api"}
+			return skill.Result{SkillName: "api"}
 		},
 	}
 	o := New()
@@ -2090,13 +2081,13 @@ func TestRunCopilot_FailureContextWritten(t *testing.T) {
 
 	s := &mockSkill{
 		name: "api",
-		runFn: func(ctx *skill.SkillContext) skill.SkillResult {
+		runFn: func(ctx *skill.Context) skill.Result {
 			ctx.Reporter.Record(framework.TestResult{
 				Name:    "case-1",
 				Passed:  false,
 				Message: "fail",
 			})
-			return skill.SkillResult{SkillName: "api"}
+			return skill.Result{SkillName: "api"}
 		},
 	}
 	o := New()
@@ -2172,12 +2163,12 @@ func TestRunCopilot_CustomPatchApplier(t *testing.T) {
 	// instead of creating a default one.
 	s := &mockSkill{
 		name: "api",
-		runFn: func(ctx *skill.SkillContext) skill.SkillResult {
+		runFn: func(ctx *skill.Context) skill.Result {
 			ctx.Reporter.Record(framework.TestResult{
 				Name:   "case-1",
 				Passed: false,
 			})
-			return skill.SkillResult{SkillName: "api"}
+			return skill.Result{SkillName: "api"}
 		},
 	}
 	o := New()
@@ -2257,7 +2248,7 @@ func TestRun_Integration_FullFlow(t *testing.T) {
 	s := &mockSkill{
 		name:     "api",
 		priority: skill.PriorityNormal,
-		runFn: func(ctx *skill.SkillContext) skill.SkillResult {
+		runFn: func(ctx *skill.Context) skill.Result {
 			start := time.Now()
 			resp, body, err := skill.HTTPRequest(
 				&http.Client{Timeout: 5 * time.Second},
@@ -2267,26 +2258,26 @@ func TestRun_Integration_FullFlow(t *testing.T) {
 			)
 			if err != nil {
 				skill.RecordResult(ctx.Reporter, "api-data", start, false, err.Error(), err)
-				return skill.SkillResult{SkillName: "api", Error: err}
+				return skill.Result{SkillName: "api", Error: err}
 			}
 			// Assert status code.
 			assertResult := ctx.Asserts.AssertStatusCode(resp, http.StatusOK)
 			if !assertResult.Passed {
 				skill.RecordResult(ctx.Reporter, "api-data", start, false, assertResult.Message, nil)
-				return skill.SkillResult{SkillName: "api"}
+				return skill.Result{SkillName: "api"}
 			}
 			// Assert response envelope.
 			fieldsResult, codeResult := skill.AssertCommonEnvelope(ctx.Asserts, body, 0)
 			if !fieldsResult.Passed {
 				skill.RecordResult(ctx.Reporter, "api-data", start, false, fieldsResult.Message, nil)
-				return skill.SkillResult{SkillName: "api"}
+				return skill.Result{SkillName: "api"}
 			}
 			if !codeResult.Passed {
 				skill.RecordResult(ctx.Reporter, "api-data", start, false, codeResult.Message, nil)
-				return skill.SkillResult{SkillName: "api"}
+				return skill.Result{SkillName: "api"}
 			}
 			skill.RecordResult(ctx.Reporter, "api-data", start, true, "OK", nil)
-			return skill.SkillResult{SkillName: "api"}
+			return skill.Result{SkillName: "api"}
 		},
 	}
 	o := New()

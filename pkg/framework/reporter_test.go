@@ -53,7 +53,7 @@ func TestSnapshot(t *testing.T) {
 		snap := r.Snapshot()
 		// Mutating the returned slice must not affect the reporter.
 		snap[0].Name = "mutated"
-		snap = append(snap, TestResult{Name: "extra"})
+		_ = append(snap, TestResult{Name: "extra"})
 
 		again := r.Snapshot()
 		if len(again) != 1 {

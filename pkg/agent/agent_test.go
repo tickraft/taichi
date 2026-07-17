@@ -46,8 +46,8 @@ func writeFile(t *testing.T, path, content string) {
 }
 
 // newFailureContext builds a sample FailureContext for testing.
-func newFailureContext() *failure.FailureContext {
-	return &failure.FailureContext{
+func newFailureContext() *failure.Context {
+	return &failure.Context{
 		ProjectName: "test-project",
 		BaseURL:     "http://localhost:8080",
 		Timestamp:   "2024-01-01T00:00:00Z",
@@ -409,7 +409,7 @@ printf '%%s' '{"fixed":true,"mode":"direct","message":"ok"}'
 	if err != nil {
 		t.Fatalf("read stdin capture: %v", err)
 	}
-	var decoded failure.FailureContext
+	var decoded failure.Context
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		t.Fatalf("unmarshal captured stdin: %v", err)
 	}
@@ -615,7 +615,7 @@ func TestHTTPInvokerRequestBody(t *testing.T) {
 		t.Fatalf("AnalyzeAndFix error: %v", err)
 	}
 	// Verify the request body decodes to the same FailureContext.
-	var decoded failure.FailureContext
+	var decoded failure.Context
 	if err := json.Unmarshal(bodyBytes, &decoded); err != nil {
 		t.Fatalf("unmarshal request body: %v", err)
 	}

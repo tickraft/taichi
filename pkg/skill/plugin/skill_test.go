@@ -51,12 +51,12 @@ func (l *recordingLogger) Messages() []string {
 }
 
 // newTestContext builds a SkillContext backed by a fresh reporter and assertion engine.
-func newTestContext(t *testing.T, baseURL string, logger skill.Logger) *skill.SkillContext {
+func newTestContext(t *testing.T, baseURL string, logger skill.Logger) *skill.Context {
 	t.Helper()
 	if logger == nil {
 		logger = skill.NoOpLogger{}
 	}
-	return &skill.SkillContext{
+	return &skill.Context{
 		Ctx:         context.Background(),
 		ProjectName: "test-project",
 		BaseURL:     baseURL,
@@ -87,7 +87,7 @@ func writeScript(t *testing.T, body string) string {
 // configureAndSetup wires the skill with the given raw config and invokes Setup.
 func configureAndSetup(t *testing.T, s *Skill, raw map[string]any) {
 	t.Helper()
-	if err := s.Configure(skill.SkillConfig{Raw: raw}); err != nil {
+	if err := s.Configure(skill.Config{Raw: raw}); err != nil {
 		t.Fatalf("Configure: %v", err)
 	}
 	if err := s.Setup(nil); err != nil {
@@ -97,7 +97,7 @@ func configureAndSetup(t *testing.T, s *Skill, raw map[string]any) {
 
 // runWithScript configures the skill to invoke the given script path and runs it
 // against a fresh context.
-func runWithScript(t *testing.T, scriptPath string, logger skill.Logger, extraRaw ...map[string]any) skill.SkillResult {
+func runWithScript(t *testing.T, scriptPath string, logger skill.Logger, extraRaw ...map[string]any) skill.Result {
 	t.Helper()
 	raw := map[string]any{
 		"command": scriptPath,
@@ -141,7 +141,7 @@ func TestPriority(t *testing.T) {
 // TestConfigureNil verifies that a nil raw map produces an error.
 func TestConfigureNil(t *testing.T) {
 	s := New("myplugin")
-	if err := s.Configure(skill.SkillConfig{}); err == nil {
+	if err := s.Configure(skill.Config{}); err == nil {
 		t.Errorf("Configure with nil raw: expected error, got nil")
 	}
 }
@@ -150,7 +150,7 @@ func TestConfigureNil(t *testing.T) {
 func TestConfigureNoCommand(t *testing.T) {
 	s := New("myplugin")
 	raw := map[string]any{"args": []any{"-x"}}
-	if err := s.Configure(skill.SkillConfig{Raw: raw}); err == nil {
+	if err := s.Configure(skill.Config{Raw: raw}); err == nil {
 		t.Errorf("Configure without command: expected error, got nil")
 	}
 }
@@ -159,7 +159,7 @@ func TestConfigureNoCommand(t *testing.T) {
 func TestConfigureEmptyCommand(t *testing.T) {
 	s := New("myplugin")
 	raw := map[string]any{"command": ""}
-	if err := s.Configure(skill.SkillConfig{Raw: raw}); err == nil {
+	if err := s.Configure(skill.Config{Raw: raw}); err == nil {
 		t.Errorf("Configure with empty command: expected error, got nil")
 	}
 }
@@ -176,7 +176,7 @@ func TestConfigureValid(t *testing.T) {
 		"timeout":   "10s",
 		"endpoints": []any{"/api/v1/custom"},
 	}
-	if err := s.Configure(skill.SkillConfig{Raw: raw}); err != nil {
+	if err := s.Configure(skill.Config{Raw: raw}); err != nil {
 		t.Fatalf("Configure: %v", err)
 	}
 	if s.command != "./script" {
@@ -217,7 +217,7 @@ func TestConfigureExtractsConfig(t *testing.T) {
 		"endpoints": []any{"/a", "/b"},
 		"retries":   3,
 	}
-	if err := s.Configure(skill.SkillConfig{Raw: raw}); err != nil {
+	if err := s.Configure(skill.Config{Raw: raw}); err != nil {
 		t.Fatalf("Configure: %v", err)
 	}
 	if _, ok := s.config["command"]; ok {
@@ -238,7 +238,7 @@ func TestConfigureExtractsConfig(t *testing.T) {
 // TestSetup verifies Setup returns nil.
 func TestSetup(t *testing.T) {
 	s := New("myplugin")
-	if err := s.Configure(skill.SkillConfig{Raw: map[string]any{"command": "./x"}}); err != nil {
+	if err := s.Configure(skill.Config{Raw: map[string]any{"command": "./x"}}); err != nil {
 		t.Fatalf("Configure: %v", err)
 	}
 	if err := s.Setup(nil); err != nil {

@@ -8,7 +8,7 @@
 //     cargo run, java -jar, etc.), started as a subprocess and waited until the
 //     ready URL becomes reachable. Serves both frontend.* and custom Kind.
 //
-// Environments are configured via EnvSpec (isomorphic to config.Env) and
+// Environments are configured via Spec (isomorphic to config.Env) and
 // orchestrated by the Manager.
 package env
 
@@ -35,11 +35,11 @@ const (
 	defaultFrontendReadyTimeout = 60 * time.Second
 )
 
-// EnvSpec is the runtime config of an environment, isomorphic to config.Env but
+// Spec is the runtime config of an environment, isomorphic to config.Env but
 // supplemented with fields needed at runtime.
 //
 // Converted from config.Env via NewSpec.
-type EnvSpec struct {
+type Spec struct {
 	// Name is the unique identifier of the env (matching the config.Env map key).
 	Name string
 	// Kind is the major env category.
@@ -67,9 +67,9 @@ type EnvSpec struct {
 	ReadyText string
 }
 
-// NewSpec builds an EnvSpec from a config.Env.
-func NewSpec(name string, e config.Env) EnvSpec {
-	return EnvSpec{
+// NewSpec builds an Spec from a config.Env.
+func NewSpec(name string, e config.Env) Spec {
+	return Spec{
 		Name:           name,
 		Kind:           e.Kind,
 		Port:           e.Port,
@@ -110,7 +110,7 @@ type Environment interface {
 // in any language can be started (Python/Rust/Java/Ruby/Node backend, etc.).
 // Pure Go/Node binary services are recommended to use backend.* to get build and
 // port management capabilities.
-func New(spec EnvSpec, projectRoot string) (Environment, error) {
+func New(spec Spec, projectRoot string) (Environment, error) {
 	switch spec.Kind {
 	case config.EnvKindBackendGo, config.EnvKindBackendNode:
 		return newBackend(spec, projectRoot), nil
@@ -124,11 +124,11 @@ func New(spec EnvSpec, projectRoot string) (Environment, error) {
 // backend wraps framework.ServiceLifecycle to adapt it to the Environment interface.
 type backend struct {
 	lifecycle *framework.ServiceLifecycle
-	spec      EnvSpec
+	spec      Spec
 	baseURL   string
 }
 
-func newBackend(spec EnvSpec, projectRoot string) *backend {
+func newBackend(spec Spec, projectRoot string) *backend {
 	cfg := framework.ServiceConfig{
 		BinaryPath:     spec.BinaryPath,
 		BuildTarget:    spec.BuildTarget,
@@ -185,7 +185,7 @@ func (b *backend) LogPath() string {
 // On stop, it first sends Interrupt; if the process does not exit within 10
 // seconds, it sends Kill.
 type processEnv struct {
-	spec        EnvSpec
+	spec        Spec
 	projectRoot string
 	cmd         *exec.Cmd
 	logFile     *os.File
@@ -194,7 +194,7 @@ type processEnv struct {
 	mu          sync.Mutex
 }
 
-func newProcessEnv(spec EnvSpec, projectRoot string) *processEnv {
+func newProcessEnv(spec Spec, projectRoot string) *processEnv {
 	return &processEnv{spec: spec, projectRoot: projectRoot}
 }
 
@@ -397,11 +397,11 @@ func splitCommand(s string) []string {
 // current env first.
 type Manager struct {
 	env  Environment
-	spec EnvSpec
+	spec Spec
 }
 
 // NewManager creates a Manager from spec and projectRoot.
-func NewManager(spec EnvSpec, projectRoot string) (*Manager, error) {
+func NewManager(spec Spec, projectRoot string) (*Manager, error) {
 	e, err := New(spec, projectRoot)
 	if err != nil {
 		return nil, err
@@ -430,7 +430,7 @@ func (m *Manager) LogPath() string {
 }
 
 // Spec returns the env config.
-func (m *Manager) Spec() EnvSpec {
+func (m *Manager) Spec() Spec {
 	return m.spec
 }
 

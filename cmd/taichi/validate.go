@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+
 	"github.com/tickraft/taichi/pkg/config"
 	"github.com/tickraft/taichi/pkg/i18n"
 )
@@ -16,8 +17,11 @@ import (
 func newValidateCmd(gf *globalFlags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "validate",
-		Short: i18n.T("cli.validate.short"),
-		Long:  i18n.T("cli.validate.long"),
+		Short: "Validate a configuration file",
+		Long: `Load and validate a taichi configuration file without starting environments or executing skills.
+
+Useful for catching config syntax and integrity errors before a run.
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return validateConfig(cmd, gf)
 		},
@@ -36,6 +40,6 @@ func validateConfig(cmd *cobra.Command, gf *globalFlags) error {
 	}
 	applyConfigLocale(cmd, gf, cfg)
 
-	fmt.Fprintln(cmd.OutOrStdout(), i18n.T("cli.validate.ok"))
+	_, _ = fmt.Fprintln(cmd.OutOrStdout(), i18n.T("cli.validate.ok"))
 	return nil
 }

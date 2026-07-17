@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+
 	"github.com/tickraft/taichi/pkg/agent"
 	"github.com/tickraft/taichi/pkg/i18n"
 	"github.com/tickraft/taichi/pkg/orchestrator"
@@ -44,33 +45,52 @@ func newCopilotCmd(gf *globalFlags) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "copilot",
-		Short: i18n.T("cli.copilot.short"),
-		Long:  i18n.T("cli.copilot.long"),
+		Short: "AI Agent collaborative test → fix → regression fully automated loop",
+		Long: `AI Agent collaborative test → fix → regression fully automated loop:
+
+1. Run tests (orchestrator.Run)
+2. If all pass, return immediately
+3. If there are failures:
+   a. Build a failure context (JSON)
+   b. Invoke the AI Agent to analyze and fix
+   c. Apply the fix (patch or direct mode)
+   d. Re-run tests (regression)
+   e. If regression passes, return success; otherwise increment the
+      round and go back to step 3
+4. If failures remain after MaxRounds, return the final failure result
+
+Agent invocation (one of):
+  --agent-cli trae --agent-args "agent fix"
+  --agent-endpoint http://localhost:8080/fix
+
+Agent script protocol:
+  stdin:  FailureContext JSON
+  stdout: FixResult JSON {"fixed":true,"mode":"patch","patch":"...","message":"..."}`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runCopilot(cmd, gf, af)
 		},
 	}
 
 	cmd.Flags().StringVarP(&af.project, "project", "p", "",
-		i18n.T("cli.copilot.flag.project"))
+		"Project name for this run")
 	cmd.Flags().StringArrayVarP(&af.skills, "skill", "s", nil,
-		i18n.T("cli.copilot.flag.skill"))
+		"Run only specified skills (repeatable)")
 	cmd.Flags().StringVar(&af.reportsDir, "reports-dir", "",
-		i18n.T("cli.copilot.flag.reports_dir"))
+		"Override the report output directory in config")
 	cmd.Flags().DurationVar(&af.timeout, "timeout", 0,
-		i18n.T("cli.copilot.flag.timeout"))
+		"Total timeout for this run (0 means no limit)")
 	cmd.Flags().IntVar(&af.maxRounds, "max-rounds", 3,
-		i18n.T("cli.copilot.flag.max_rounds"))
+		"Maximum fix rounds (default 3)")
 	cmd.Flags().StringVar(&af.agentCLI, "agent-cli", "",
-		i18n.T("cli.copilot.flag.agent_cli"))
+		"AI Agent command line (e.g. trae), exchanges JSON via stdin/stdout")
 	cmd.Flags().StringArrayVar(&af.agentArgs, "agent-args", nil,
-		i18n.T("cli.copilot.flag.agent_args"))
+		"AI Agent command args (repeatable)")
 	cmd.Flags().StringVar(&af.agentEndpoint, "agent-endpoint", "",
-		i18n.T("cli.copilot.flag.agent_endpoint"))
+		"AI Agent HTTP endpoint (mutually exclusive with --agent-cli)")
 	cmd.Flags().StringVar(&af.agentToken, "agent-token", "",
-		i18n.T("cli.copilot.flag.agent_token"))
+		"Bearer token for HTTP mode")
 	cmd.Flags().DurationVar(&af.agentTimeout, "agent-timeout", 5*time.Minute,
-		i18n.T("cli.copilot.flag.agent_timeout"))
+		"Single Agent invocation timeout")
 
 	return cmd
 }
@@ -158,41 +178,41 @@ func buildInvoker(af *copilotFlags) (agent.Invoker, error) {
 // printCopilotResult writes the copilot result to stdout.
 func printCopilotResult(cmd *cobra.Command, r *orchestrator.CopilotResult) {
 	out := cmd.OutOrStdout()
-	fmt.Fprintf(out, "\n%s\n", i18n.T("cli.copilot.output.header"))
-	fmt.Fprintf(out, "%s: %s\n", i18n.T("cli.copilot.output.total_duration"), r.TotalDuration)
-	fmt.Fprintf(out, "%s:         %d\n", i18n.T("cli.copilot.output.rounds"), len(r.Rounds))
-	fmt.Fprintf(out, "%s:          %v\n", i18n.T("cli.copilot.output.fixed"), r.Fixed)
+	_, _ = fmt.Fprintf(out, "\n%s\n", i18n.T("cli.copilot.output.header"))
+	_, _ = fmt.Fprintf(out, "%s: %s\n", i18n.T("cli.copilot.output.total_duration"), r.TotalDuration)
+	_, _ = fmt.Fprintf(out, "%s:         %d\n", i18n.T("cli.copilot.output.rounds"), len(r.Rounds))
+	_, _ = fmt.Fprintf(out, "%s:          %v\n", i18n.T("cli.copilot.output.fixed"), r.Fixed)
 
-	fmt.Fprintf(out, "\n%s:\n", i18n.T("cli.copilot.output.final_result"))
-	fmt.Fprintf(out, "  %s:  %s\n", i18n.T("cli.copilot.output.project"), r.Final.ProjectName)
-	fmt.Fprintf(out, "  %s:  %s\n", i18n.T("cli.copilot.output.baseurl"), r.Final.BaseURL)
-	fmt.Fprintf(out, "  %s: %s\n", i18n.T("cli.copilot.output.duration"), r.Final.Duration)
-	fmt.Fprintf(out, "  %s:  %s\n", i18n.T("cli.copilot.output.summary"),
+	_, _ = fmt.Fprintf(out, "\n%s:\n", i18n.T("cli.copilot.output.final_result"))
+	_, _ = fmt.Fprintf(out, "  %s:  %s\n", i18n.T("cli.copilot.output.project"), r.Final.ProjectName)
+	_, _ = fmt.Fprintf(out, "  %s:  %s\n", i18n.T("cli.copilot.output.baseurl"), r.Final.BaseURL)
+	_, _ = fmt.Fprintf(out, "  %s: %s\n", i18n.T("cli.copilot.output.duration"), r.Final.Duration)
+	_, _ = fmt.Fprintf(out, "  %s:  %s\n", i18n.T("cli.copilot.output.summary"),
 		i18n.T("cli.copilot.output.summary_format",
 			r.Final.Summary.Total, r.Final.Summary.Passed,
 			r.Final.Summary.Failed, r.Final.Summary.Skipped))
 
 	if len(r.Rounds) > 0 {
-		fmt.Fprintf(out, "\n%s:\n", i18n.T("cli.copilot.output.fix_rounds"))
+		_, _ = fmt.Fprintf(out, "\n%s:\n", i18n.T("cli.copilot.output.fix_rounds"))
 		for _, round := range r.Rounds {
-			fmt.Fprintf(out, "  %s %d:\n", i18n.T("cli.copilot.output.round"), round.Round)
-			fmt.Fprintf(out, "    %s:     %d\n", i18n.T("cli.copilot.output.failures"), len(round.FailureContext.FailedCases))
+			_, _ = fmt.Fprintf(out, "  %s %d:\n", i18n.T("cli.copilot.output.round"), round.Round)
+			_, _ = fmt.Fprintf(out, "    %s:     %d\n", i18n.T("cli.copilot.output.failures"), len(round.FailureContext.FailedCases))
 			if round.AgentError != nil {
-				fmt.Fprintf(out, "    %s:  %v\n", i18n.T("cli.copilot.output.agent_error"), round.AgentError)
+				_, _ = fmt.Fprintf(out, "    %s:  %v\n", i18n.T("cli.copilot.output.agent_error"), round.AgentError)
 				continue
 			}
 			if round.FixResult != nil {
-				fmt.Fprintf(out, "    %s:        %v\n", i18n.T("cli.copilot.output.fixed_label"), round.FixResult.Fixed)
-				fmt.Fprintf(out, "    %s:         %s\n", i18n.T("cli.copilot.output.mode"), round.FixResult.Mode)
-				fmt.Fprintf(out, "    %s:      %s\n", i18n.T("cli.copilot.output.message"), round.FixResult.Message)
+				_, _ = fmt.Fprintf(out, "    %s:        %v\n", i18n.T("cli.copilot.output.fixed_label"), round.FixResult.Fixed)
+				_, _ = fmt.Fprintf(out, "    %s:         %s\n", i18n.T("cli.copilot.output.mode"), round.FixResult.Mode)
+				_, _ = fmt.Fprintf(out, "    %s:      %s\n", i18n.T("cli.copilot.output.message"), round.FixResult.Message)
 				if round.FixResult.Analysis != "" {
-					fmt.Fprintf(out, "    %s:     %s\n", i18n.T("cli.copilot.output.analysis"), round.FixResult.Analysis)
+					_, _ = fmt.Fprintf(out, "    %s:     %s\n", i18n.T("cli.copilot.output.analysis"), round.FixResult.Analysis)
 				}
 			}
 			if round.ApplyError != nil {
-				fmt.Fprintf(out, "    %s:  %v\n", i18n.T("cli.copilot.output.apply_error"), round.ApplyError)
+				_, _ = fmt.Fprintf(out, "    %s:  %v\n", i18n.T("cli.copilot.output.apply_error"), round.ApplyError)
 			}
 		}
 	}
-	fmt.Fprintln(out)
+	_, _ = fmt.Fprintln(out)
 }

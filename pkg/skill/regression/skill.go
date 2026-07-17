@@ -13,7 +13,7 @@ import (
 
 // Skill is the regression test skill.
 type Skill struct {
-	cfg     skill.SkillConfig
+	cfg     skill.Config
 	cases   []regressionCase
 	timeout time.Duration
 	client  *http.Client
@@ -35,7 +35,7 @@ func (s *Skill) Name() string { return "regression" }
 func (s *Skill) Kind() skill.Kind { return skill.KindRegression }
 
 // Configure implements skill.TestSkill.
-func (s *Skill) Configure(cfg skill.SkillConfig) error {
+func (s *Skill) Configure(cfg skill.Config) error {
 	s.cfg = cfg
 	raw := cfg.Raw
 	if raw == nil {
@@ -72,13 +72,13 @@ func (s *Skill) Configure(cfg skill.SkillConfig) error {
 func (s *Skill) Priority() skill.Priority { return skill.PriorityLow }
 
 // Setup implements skill.TestSkill.
-func (s *Skill) Setup(ctx *skill.SkillContext) error {
+func (s *Skill) Setup(ctx *skill.Context) error {
 	s.client = &http.Client{Timeout: s.timeout}
 	return nil
 }
 
 // Run implements skill.TestSkill.
-func (s *Skill) Run(ctx *skill.SkillContext) skill.SkillResult {
+func (s *Skill) Run(ctx *skill.Context) skill.Result {
 	start := time.Now()
 	asserts := ctx.Asserts
 	for _, c := range s.cases {
@@ -108,7 +108,7 @@ func (s *Skill) Run(ctx *skill.SkillContext) skill.SkillResult {
 		skill.RecordResult(ctx.Reporter, "regression:"+c.Name, caseStart, true, "ok", nil)
 	}
 	summary := ctx.Reporter.Summary()
-	return skill.SkillResult{
+	return skill.Result{
 		SkillName: s.Name(),
 		Duration:  time.Since(start),
 		Summary:   summary,
@@ -116,4 +116,4 @@ func (s *Skill) Run(ctx *skill.SkillContext) skill.SkillResult {
 }
 
 // Teardown implements skill.TestSkill.
-func (s *Skill) Teardown(ctx *skill.SkillContext) error { return nil }
+func (s *Skill) Teardown(ctx *skill.Context) error { return nil }

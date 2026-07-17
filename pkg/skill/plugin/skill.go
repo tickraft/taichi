@@ -7,8 +7,8 @@
 //
 // Protocol contract:
 //
-//	stdin  → PluginInput  (JSON)
-//	stdout ← PluginOutput (JSON)
+//	stdin  → Input  (JSON)
+//	stdout ← Output (JSON)
 //	stderr ← free-form logs (taichi forwards them to its own logger)
 //	exit 0 = plugin executed normally (pass/fail is expressed via stdout JSON)
 //	exit ≠ 0 = plugin-level fatal error
@@ -44,8 +44,8 @@ import (
 	"github.com/tickraft/taichi/pkg/skill"
 )
 
-// PluginInput is the JSON structure taichi writes to the plugin process's stdin.
-type PluginInput struct {
+// Input is the JSON structure taichi writes to the plugin process's stdin.
+type Input struct {
 	// SkillName is the skill name (from config skills[].name).
 	SkillName string `json:"skill_name"`
 	// ProjectName is the name of the project under test.
@@ -58,16 +58,16 @@ type PluginInput struct {
 	Config map[string]any `json:"config,omitempty"`
 }
 
-// PluginOutput is the JSON structure the plugin process writes to stdout.
-type PluginOutput struct {
+// Output is the JSON structure the plugin process writes to stdout.
+type Output struct {
 	// Cases holds the test case results produced by the plugin.
-	Cases []PluginCase `json:"cases"`
+	Cases []Case `json:"cases"`
 	// Error holds a plugin-level fatal error message (non-empty means the skill did not run to completion).
 	Error string `json:"error,omitempty"`
 }
 
-// PluginCase is a single plugin test case result.
-type PluginCase struct {
+// Case is a single plugin test case result.
+type Case struct {
 	// Name is the case name.
 	Name string `json:"name"`
 	// Passed indicates whether the case passed.
@@ -87,7 +87,7 @@ type PluginCase struct {
 // Each Skill instance corresponds to one plugin config. It parses command/args/env/workdir/timeout
 // during Configure, and launches the plugin process and exchanges JSON during Run.
 type Skill struct {
-	cfg     skill.SkillConfig
+	cfg     skill.Config
 	name    string
 	command string
 	args    []string
@@ -113,7 +113,7 @@ func (s *Skill) Kind() skill.Kind { return skill.KindPlugin }
 // Configure implements skill.TestSkill.
 // It extracts the control fields command/args/env/workdir/timeout from raw;
 // the remaining fields are kept as the plugin's business config in s.config.
-func (s *Skill) Configure(cfg skill.SkillConfig) error {
+func (s *Skill) Configure(cfg skill.Config) error {
 	s.cfg = cfg
 	raw := cfg.Raw
 	if raw == nil {
@@ -177,17 +177,17 @@ func (s *Skill) Configure(cfg skill.SkillConfig) error {
 func (s *Skill) Priority() skill.Priority { return skill.PriorityNormal }
 
 // Setup implements skill.TestSkill. Plugin skills have no extra resources to prepare; return directly.
-func (s *Skill) Setup(ctx *skill.SkillContext) error { return nil }
+func (s *Skill) Setup(ctx *skill.Context) error { return nil }
 
 // Run implements skill.TestSkill. It launches the plugin process, exchanges JSON, and records results onto the reporter.
-func (s *Skill) Run(ctx *skill.SkillContext) skill.SkillResult {
+func (s *Skill) Run(ctx *skill.Context) skill.Result {
 	start := time.Now()
 	logger := ctx.Logger
 	if logger == nil {
 		logger = skill.NoOpLogger{}
 	}
 
-	input := PluginInput{
+	input := Input{
 		SkillName:   s.name,
 		ProjectName: ctx.ProjectName,
 		BaseURL:     ctx.BaseURL,
@@ -196,7 +196,7 @@ func (s *Skill) Run(ctx *skill.SkillContext) skill.SkillResult {
 	}
 	inputJSON, err := json.Marshal(input)
 	if err != nil {
-		return skill.SkillResult{
+		return skill.Result{
 			SkillName: s.name,
 			Duration:  time.Since(start),
 			Error:     fmt.Errorf("marshal plugin input: %w", err),
@@ -232,13 +232,13 @@ func (s *Skill) Run(ctx *skill.SkillContext) skill.SkillResult {
 	stdout, err := cmd.Output()
 	if err != nil {
 		if cmdCtx.Err() == context.DeadlineExceeded {
-			return skill.SkillResult{
+			return skill.Result{
 				SkillName: s.name,
 				Duration:  time.Since(start),
 				Error:     fmt.Errorf("plugin %q timeout after %s", s.name, s.timeout),
 			}
 		}
-		return skill.SkillResult{
+		return skill.Result{
 			SkillName: s.name,
 			Duration:  time.Since(start),
 			Error:     fmt.Errorf("plugin %q execution failed: %w", s.name, err),
@@ -246,9 +246,9 @@ func (s *Skill) Run(ctx *skill.SkillContext) skill.SkillResult {
 	}
 
 	// Parse the plugin output.
-	var output PluginOutput
+	var output Output
 	if err := json.Unmarshal(stdout, &output); err != nil {
-		return skill.SkillResult{
+		return skill.Result{
 			SkillName: s.name,
 			Duration:  time.Since(start),
 			Error:     fmt.Errorf("plugin %q stdout is not valid JSON: %w", s.name, err),
@@ -256,7 +256,7 @@ func (s *Skill) Run(ctx *skill.SkillContext) skill.SkillResult {
 	}
 
 	if output.Error != "" {
-		return skill.SkillResult{
+		return skill.Result{
 			SkillName: s.name,
 			Duration:  time.Since(start),
 			Error:     fmt.Errorf("plugin %q: %s", s.name, output.Error),
@@ -284,7 +284,7 @@ func (s *Skill) Run(ctx *skill.SkillContext) skill.SkillResult {
 	}
 
 	summary := ctx.Reporter.Summary()
-	return skill.SkillResult{
+	return skill.Result{
 		SkillName: s.name,
 		Duration:  time.Since(start),
 		Summary:   summary,
@@ -292,4 +292,4 @@ func (s *Skill) Run(ctx *skill.SkillContext) skill.SkillResult {
 }
 
 // Teardown implements skill.TestSkill. Plugin skills have no extra resources to clean up.
-func (s *Skill) Teardown(ctx *skill.SkillContext) error { return nil }
+func (s *Skill) Teardown(ctx *skill.Context) error { return nil }

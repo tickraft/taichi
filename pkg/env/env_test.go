@@ -22,7 +22,7 @@ import (
 // =====================================================================
 
 // TestNewSpec verifies that NewSpec maps every config.Env field onto the
-// corresponding EnvSpec field, including the HealthyTimeout string→Duration
+// corresponding Spec field, including the HealthyTimeout string→Duration
 // conversion performed via HealthyTimeoutDuration.
 func TestNewSpec(t *testing.T) {
 	t.Run("full field mapping", func(t *testing.T) {
@@ -147,7 +147,7 @@ func TestNewSpec(t *testing.T) {
 func TestNew_BackendKinds(t *testing.T) {
 	for _, kind := range []config.EnvKind{config.EnvKindBackendGo, config.EnvKindBackendNode} {
 		t.Run(string(kind), func(t *testing.T) {
-			e, err := New(EnvSpec{Kind: kind, BinaryPath: "bin/x"}, "/tmp")
+			e, err := New(Spec{Kind: kind, BinaryPath: "bin/x"}, "/tmp")
 			if err != nil {
 				t.Fatalf("New returned error: %v", err)
 			}
@@ -169,7 +169,7 @@ func TestNew_ProcessKinds(t *testing.T) {
 		config.EnvKindCustom,
 	} {
 		t.Run(string(kind), func(t *testing.T) {
-			e, err := New(EnvSpec{Kind: kind, Command: "sleep 30"}, "/tmp")
+			e, err := New(Spec{Kind: kind, Command: "sleep 30"}, "/tmp")
 			if err != nil {
 				t.Fatalf("New returned error: %v", err)
 			}
@@ -185,7 +185,7 @@ func TestNew_ProcessKinds(t *testing.T) {
 
 // TestNew_UnknownKind verifies that an unrecognized kind produces an error.
 func TestNew_UnknownKind(t *testing.T) {
-	_, err := New(EnvSpec{Kind: config.EnvKind("bogus.kind")}, "/tmp")
+	_, err := New(Spec{Kind: config.EnvKind("bogus.kind")}, "/tmp")
 	if err == nil {
 		t.Fatal("expected error for unknown kind, got nil")
 	}
@@ -202,7 +202,7 @@ func TestNew_UnknownKind(t *testing.T) {
 // and makes Stop a no-op, without ever invoking the underlying lifecycle.
 func TestBackend_WithBaseURL(t *testing.T) {
 	const want = "http://example.test:1234"
-	b := newBackend(EnvSpec{Kind: config.EnvKindBackendGo, BaseURL: want}, "/tmp")
+	b := newBackend(Spec{Kind: config.EnvKindBackendGo, BaseURL: want}, "/tmp")
 
 	// Before Start, BaseURL and LogPath are empty (lifecycle never started).
 	if got := b.BaseURL(); got != "" {
@@ -238,7 +238,7 @@ func TestBackend_WithBaseURL(t *testing.T) {
 
 // TestBackend_BaseURLAndLogPathBeforeStart confirms empty getters prior to Start.
 func TestBackend_BaseURLAndLogPathBeforeStart(t *testing.T) {
-	b := newBackend(EnvSpec{Kind: config.EnvKindBackendGo, BinaryPath: "bin/x"}, "/tmp")
+	b := newBackend(Spec{Kind: config.EnvKindBackendGo, BinaryPath: "bin/x"}, "/tmp")
 	if b.BaseURL() != "" {
 		t.Errorf("BaseURL = %q, want empty", b.BaseURL())
 	}
@@ -255,7 +255,7 @@ func TestBackend_BaseURLAndLogPathBeforeStart(t *testing.T) {
 // launch entirely.
 func TestProcessEnv_StartWithBaseURL(t *testing.T) {
 	const want = "http://example.test:5173"
-	f := newProcessEnv(EnvSpec{Kind: config.EnvKindFrontendVite, BaseURL: want}, "/tmp")
+	f := newProcessEnv(Spec{Kind: config.EnvKindFrontendVite, BaseURL: want}, "/tmp")
 
 	if f.BaseURL() != "" {
 		t.Errorf("BaseURL before Start = %q, want empty", f.BaseURL())
@@ -297,7 +297,7 @@ func TestProcessEnv_StartWithBaseURL(t *testing.T) {
 // TestProcessEnv_StartEmptyCommand verifies that Start fails when Command is
 // empty and no BaseURL is preset.
 func TestProcessEnv_StartEmptyCommand(t *testing.T) {
-	f := newProcessEnv(EnvSpec{Kind: config.EnvKindCustom, Name: "no-cmd"}, t.TempDir())
+	f := newProcessEnv(Spec{Kind: config.EnvKindCustom, Name: "no-cmd"}, t.TempDir())
 	_, err := f.Start(context.Background())
 	if err == nil {
 		t.Fatal("expected error for empty command, got nil")
@@ -313,7 +313,7 @@ func TestProcessEnv_StartEmptyCommand(t *testing.T) {
 // TestProcessEnv_StartCommandNotFound verifies that a missing binary surfaces a
 // wrapped start error and leaves no running process behind.
 func TestProcessEnv_StartCommandNotFound(t *testing.T) {
-	f := newProcessEnv(EnvSpec{
+	f := newProcessEnv(Spec{
 		Kind:    config.EnvKindCustom,
 		Name:    "missing",
 		Command: "definitely-not-a-real-binary-xyzzy",
@@ -336,7 +336,7 @@ func TestProcessEnv_StartReadyURLEmpty(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping subprocess test in short mode")
 	}
-	f := newProcessEnv(EnvSpec{
+	f := newProcessEnv(Spec{
 		Kind:    config.EnvKindCustom,
 		Name:    "no-ready",
 		Command: "sleep 30",
@@ -379,7 +379,7 @@ func TestProcessEnv_StartSuccess(t *testing.T) {
 	defer srv.Close()
 
 	root := t.TempDir()
-	f := newProcessEnv(EnvSpec{
+	f := newProcessEnv(Spec{
 		Kind:      config.EnvKindFrontendVite,
 		Name:      "e2e",
 		Command:   "sleep 30",
@@ -436,7 +436,7 @@ func TestProcessEnv_StartSuccessNoReadyText(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	f := newProcessEnv(EnvSpec{
+	f := newProcessEnv(Spec{
 		Kind:     config.EnvKindCustom,
 		Name:     "no-text",
 		Command:  "sleep 30",
@@ -471,7 +471,7 @@ func TestProcessEnv_CwdResolution(t *testing.T) {
 
 	t.Run("absolute existing cwd", func(t *testing.T) {
 		abs := t.TempDir()
-		f := newProcessEnv(EnvSpec{
+		f := newProcessEnv(Spec{
 			Kind: config.EnvKindCustom, Name: "abs",
 			Command: "sleep 30", Cwd: abs, ReadyURL: srv.URL, ReadyText: "ready",
 		}, t.TempDir())
@@ -491,7 +491,7 @@ func TestProcessEnv_CwdResolution(t *testing.T) {
 		if err := os.Mkdir(sub, 0o755); err != nil {
 			t.Fatalf("mkdir: %v", err)
 		}
-		f := newProcessEnv(EnvSpec{
+		f := newProcessEnv(Spec{
 			Kind: config.EnvKindCustom, Name: "rel",
 			Command: "sleep 30", Cwd: "mydir", ReadyURL: srv.URL, ReadyText: "ready",
 		}, root)
@@ -506,7 +506,7 @@ func TestProcessEnv_CwdResolution(t *testing.T) {
 	})
 
 	t.Run("non-existent cwd fails to start", func(t *testing.T) {
-		f := newProcessEnv(EnvSpec{
+		f := newProcessEnv(Spec{
 			Kind: config.EnvKindCustom, Name: "badcwd",
 			Command: "sleep 30",
 			Cwd:     filepath.Join(t.TempDir(), "does-not-exist"),
@@ -527,7 +527,7 @@ func TestProcessEnv_CwdResolution(t *testing.T) {
 
 // TestProcessEnv_StopWithoutStart verifies Stop is a no-op when nothing ran.
 func TestProcessEnv_StopWithoutStart(t *testing.T) {
-	f := newProcessEnv(EnvSpec{Kind: config.EnvKindCustom, Name: "x"}, t.TempDir())
+	f := newProcessEnv(Spec{Kind: config.EnvKindCustom, Name: "x"}, t.TempDir())
 	if err := f.Stop(context.Background()); err != nil {
 		t.Errorf("Stop returned error: %v", err)
 	}
@@ -535,7 +535,7 @@ func TestProcessEnv_StopWithoutStart(t *testing.T) {
 
 // TestProcessEnv_BaseURLAndLogPathBeforeStart confirms empty getters prior to Start.
 func TestProcessEnv_BaseURLAndLogPathBeforeStart(t *testing.T) {
-	f := newProcessEnv(EnvSpec{Kind: config.EnvKindCustom, Name: "x"}, t.TempDir())
+	f := newProcessEnv(Spec{Kind: config.EnvKindCustom, Name: "x"}, t.TempDir())
 	if f.BaseURL() != "" {
 		t.Errorf("BaseURL = %q, want empty", f.BaseURL())
 	}
@@ -552,7 +552,7 @@ func TestProcessEnv_BaseURLAndLogPathBeforeStart(t *testing.T) {
 // log file under the project root.
 func TestProcessEnv_OpenLog(t *testing.T) {
 	root := t.TempDir()
-	f := newProcessEnv(EnvSpec{Kind: config.EnvKindCustom, Name: "logger"}, root)
+	f := newProcessEnv(Spec{Kind: config.EnvKindCustom, Name: "logger"}, root)
 
 	path, file, err := f.openLog()
 	if err != nil {
@@ -589,7 +589,7 @@ func TestProcessEnv_OpenLog(t *testing.T) {
 // directory so the test does not pollute the package directory.
 func TestProcessEnv_OpenLogNoProjectRoot(t *testing.T) {
 	t.Chdir(t.TempDir())
-	f := newProcessEnv(EnvSpec{Kind: config.EnvKindCustom, Name: "norel"}, "")
+	f := newProcessEnv(Spec{Kind: config.EnvKindCustom, Name: "norel"}, "")
 
 	path, file, err := f.openLog()
 	if err != nil {
@@ -612,7 +612,7 @@ func TestProcessEnv_OpenLogNoProjectRoot(t *testing.T) {
 
 // TestProcessEnv_WaitForReady_ReadyURLEmpty verifies the immediate error path.
 func TestProcessEnv_WaitForReady_ReadyURLEmpty(t *testing.T) {
-	f := newProcessEnv(EnvSpec{Kind: config.EnvKindCustom, Name: "x"}, "")
+	f := newProcessEnv(Spec{Kind: config.EnvKindCustom, Name: "x"}, "")
 	_, err := f.waitForReady(context.Background())
 	if err == nil {
 		t.Fatal("expected error for empty ready_url, got nil")
@@ -629,7 +629,7 @@ func TestProcessEnv_WaitForReady_NoReadyText(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer srv.Close()
-	f := newProcessEnv(EnvSpec{Kind: config.EnvKindCustom, ReadyURL: srv.URL}, "")
+	f := newProcessEnv(Spec{Kind: config.EnvKindCustom, ReadyURL: srv.URL}, "")
 	got, err := f.waitForReady(context.Background())
 	if err != nil {
 		t.Fatalf("waitForReady returned error: %v", err)
@@ -644,7 +644,7 @@ func TestProcessEnv_WaitForReady_NoReadyText(t *testing.T) {
 func TestProcessEnv_WaitForReady_ReadyTextMatch(t *testing.T) {
 	srv := startReadyServer(t, "the server is ready now")
 	defer srv.Close()
-	f := newProcessEnv(EnvSpec{
+	f := newProcessEnv(Spec{
 		Kind: config.EnvKindCustom, ReadyURL: srv.URL, ReadyText: "ready",
 	}, "")
 	got, err := f.waitForReady(context.Background())
@@ -663,7 +663,7 @@ func TestProcessEnv_WaitForReady_NotReadyStatus(t *testing.T) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	defer srv.Close()
-	f := newProcessEnv(EnvSpec{Kind: config.EnvKindCustom, ReadyURL: srv.URL}, "")
+	f := newProcessEnv(Spec{Kind: config.EnvKindCustom, ReadyURL: srv.URL}, "")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
 	defer cancel()
@@ -682,7 +682,7 @@ func TestProcessEnv_WaitForReady_NotReadyStatus(t *testing.T) {
 func TestProcessEnv_WaitForReady_ReadyTextMismatch(t *testing.T) {
 	srv := startReadyServer(t, "still compiling")
 	defer srv.Close()
-	f := newProcessEnv(EnvSpec{
+	f := newProcessEnv(Spec{
 		Kind: config.EnvKindCustom, ReadyURL: srv.URL, ReadyText: "ready",
 	}, "")
 
@@ -703,7 +703,7 @@ func TestProcessEnv_WaitForReady_ReadyTextMismatch(t *testing.T) {
 
 // TestManager_UnknownKind verifies that NewManager propagates the New error.
 func TestManager_UnknownKind(t *testing.T) {
-	_, err := NewManager(EnvSpec{Kind: config.EnvKind("bogus")}, "/tmp")
+	_, err := NewManager(Spec{Kind: config.EnvKind("bogus")}, "/tmp")
 	if err == nil {
 		t.Fatal("expected error for unknown kind, got nil")
 	}
@@ -713,7 +713,7 @@ func TestManager_UnknownKind(t *testing.T) {
 // LogPath to the underlying Environment and exposes the original spec.
 func TestManager_Delegation(t *testing.T) {
 	const want = "http://example.test:9999"
-	spec := EnvSpec{Kind: config.EnvKindFrontendVite, Name: "m", BaseURL: want}
+	spec := Spec{Kind: config.EnvKindFrontendVite, Name: "m", BaseURL: want}
 	m, err := NewManager(spec, "/tmp")
 	if err != nil {
 		t.Fatalf("NewManager returned error: %v", err)
@@ -759,7 +759,7 @@ func TestManager_Delegation(t *testing.T) {
 // using a BaseURL preset.
 func TestManager_BackendDelegation(t *testing.T) {
 	const want = "http://example.test:8080"
-	spec := EnvSpec{Kind: config.EnvKindBackendGo, Name: "be", BaseURL: want}
+	spec := Spec{Kind: config.EnvKindBackendGo, Name: "be", BaseURL: want}
 	m, err := NewManager(spec, "/tmp")
 	if err != nil {
 		t.Fatalf("NewManager returned error: %v", err)
@@ -886,7 +886,7 @@ func TestSplitCommand(t *testing.T) {
 // ReadyURL (connection refused on port 1) keeps polling; with HealthyTimeout
 // set to 200ms the function must return well within 1 second.
 func TestProcessEnv_ReadyTimeoutConfigurable(t *testing.T) {
-	f := newProcessEnv(EnvSpec{
+	f := newProcessEnv(Spec{
 		Kind:           config.EnvKindCustom,
 		Name:           "timeout",
 		ReadyURL:       "http://127.0.0.1:1/ready",

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	reflectionpb "google.golang.org/grpc/reflection/grpc_reflection_v1"
@@ -17,7 +18,7 @@ import (
 
 // runCase dispatches a single gRPC case to its executor and returns a message + error.
 // caseStart marks the beginning of the case for latency assertion.
-func (s *Skill) runCase(ctx *skill.SkillContext, c grpcCase, caseStart time.Time) (string, error) {
+func (s *Skill) runCase(ctx *skill.Context, c grpcCase, caseStart time.Time) (string, error) {
 	if c.Target == "" {
 		return "", fmt.Errorf("target is empty (set skill.target or case.target to host:port)")
 	}
@@ -51,20 +52,42 @@ func (s *Skill) runCase(ctx *skill.SkillContext, c grpcCase, caseStart time.Time
 }
 
 // dial establishes a gRPC connection to target with the given security mode.
+// It blocks until the connection reaches Ready or fails (TransientFailure/timeout),
+// preserving the blocking semantics expected by callers and tests.
 // The caller is responsible for closing the returned connection.
 func dial(target string, insecureConn bool, timeout time.Duration) (*grpc.ClientConn, error) {
-	opts := []grpc.DialOption{
-		grpc.WithBlock(),
-		grpc.WithTimeout(timeout),
-	}
+	var opts []grpc.DialOption
 	if insecureConn {
 		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
-	return grpc.Dial(target, opts...)
+	conn, err := grpc.NewClient(target, opts...)
+	if err != nil {
+		return nil, err
+	}
+	// grpc.NewClient is non-blocking; force a connection attempt and wait for
+	// a terminal state (Ready or TransientFailure) or the timeout to elapse.
+	conn.Connect()
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	for {
+		state := conn.GetState()
+		if state == connectivity.Ready {
+			return conn, nil
+		}
+		if state == connectivity.TransientFailure {
+			_ = conn.Close()
+			return nil, fmt.Errorf("connection to %s failed", target)
+		}
+		if !conn.WaitForStateChange(ctx, state) {
+			// Context expired (timeout) before the state changed.
+			_ = conn.Close()
+			return nil, fmt.Errorf("dial %s: timeout after %s", target, timeout)
+		}
+	}
 }
 
 // runHealth performs a grpc.health.v1 Health/Check call and asserts the serving status.
-func (s *Skill) runHealth(ctx *skill.SkillContext, c grpcCase, insecureConn bool) (string, error) {
+func (s *Skill) runHealth(ctx *skill.Context, c grpcCase, insecureConn bool) (string, error) {
 	conn, err := dial(c.Target, insecureConn, s.timeout)
 	if err != nil {
 		return "", fmt.Errorf("dial %s: %w", c.Target, err)
@@ -92,7 +115,7 @@ func (s *Skill) runHealth(ctx *skill.SkillContext, c grpcCase, insecureConn bool
 }
 
 // runDial verifies that a connection can be established to the target.
-func (s *Skill) runDial(ctx *skill.SkillContext, c grpcCase, insecureConn bool) (string, error) {
+func (s *Skill) runDial(ctx *skill.Context, c grpcCase, insecureConn bool) (string, error) {
 	conn, err := dial(c.Target, insecureConn, s.timeout)
 	if err != nil {
 		return "", fmt.Errorf("dial %s: %w", c.Target, err)
@@ -103,7 +126,7 @@ func (s *Skill) runDial(ctx *skill.SkillContext, c grpcCase, insecureConn bool) 
 
 // runReflect queries server reflection for the list of exposed services and asserts
 // that all expected service names are present.
-func (s *Skill) runReflect(ctx *skill.SkillContext, c grpcCase, insecureConn bool) (string, error) {
+func (s *Skill) runReflect(ctx *skill.Context, c grpcCase, insecureConn bool) (string, error) {
 	conn, err := dial(c.Target, insecureConn, s.timeout)
 	if err != nil {
 		return "", fmt.Errorf("dial %s: %w", c.Target, err)
@@ -163,7 +186,7 @@ func (s *Skill) runReflect(ctx *skill.SkillContext, c grpcCase, insecureConn boo
 
 // assertLatency parses the case MaxLatency and asserts the elapsed time since caseStart
 // fits within it using the shared assertion engine. Empty MaxLatency skips the assertion.
-func assertLatency(ctx *skill.SkillContext, c grpcCase, caseStart time.Time) error {
+func assertLatency(ctx *skill.Context, c grpcCase, caseStart time.Time) error {
 	if c.MaxLatency == "" {
 		return nil
 	}

@@ -1,6 +1,6 @@
 // Package failure defines the structured failure context exchange contract between taichi and the AI Agent.
 //
-// When a test run has failing cases, taichi wraps the failure information into a FailureContext
+// When a test run has failing cases, taichi wraps the failure information into a Context
 // and writes it to a JSON file for the AI Agent to consume. The AI Agent reads it, analyzes the
 // failure cause, generates a fix, and then triggers a regression test, forming a fully automated
 // test→fix→regression closed loop.
@@ -16,8 +16,8 @@ import (
 	"github.com/tickraft/taichi/pkg/framework"
 )
 
-// FailureContext is the structured failure context, serving as the taichi ↔ AI Agent information exchange contract.
-type FailureContext struct {
+// Context is the structured failure context, serving as the taichi ↔ AI Agent information exchange contract.
+type Context struct {
 	// ProjectName is the name of the project under test.
 	ProjectName string `json:"project_name"`
 	// BaseURL is the base URL of the service under test.
@@ -59,8 +59,8 @@ func FromResults(
 	projectName, baseURL, projectRoot, envLogPath, reportsDir string,
 	results []framework.TestResult,
 	skillNames []string,
-) *FailureContext {
-	fc := &FailureContext{
+) *Context {
+	fc := &Context{
 		ProjectName: projectName,
 		BaseURL:     baseURL,
 		Timestamp:   time.Now().UTC().Format(time.RFC3339),
@@ -89,13 +89,13 @@ func FromResults(
 }
 
 // HasFailures returns whether there are any failed cases.
-func (fc *FailureContext) HasFailures() bool {
+func (fc *Context) HasFailures() bool {
 	return fc != nil && len(fc.FailedCases) > 0
 }
 
 // WriteToFile writes the failure context as formatted JSON to path.
 // The parent directory is created automatically when it does not exist.
-func (fc *FailureContext) WriteToFile(path string) error {
+func (fc *Context) WriteToFile(path string) error {
 	if fc == nil {
 		return fmt.Errorf("nil failure context")
 	}
@@ -113,12 +113,12 @@ func (fc *FailureContext) WriteToFile(path string) error {
 }
 
 // ReadFromFile reads the JSON-formatted failure context from path.
-func ReadFromFile(path string) (*FailureContext, error) {
+func ReadFromFile(path string) (*Context, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read failure context: %w", err)
 	}
-	var fc FailureContext
+	var fc Context
 	if err := json.Unmarshal(data, &fc); err != nil {
 		return nil, fmt.Errorf("unmarshal failure context: %w", err)
 	}

@@ -91,7 +91,7 @@ func (r *Registry) List() []skill.TestSkill {
 // sorted by Priority in ascending order.
 // Skills not present in the config are not selected; skills present in the config
 // but not registered are skipped and recorded in the missing return value.
-func (r *Registry) Select(configs []skill.SkillConfig) (selected []skill.TestSkill, missing []string) {
+func (r *Registry) Select(configs []skill.Config) (selected []skill.TestSkill, missing []string) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 

@@ -40,6 +40,7 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
+
 	"github.com/tickraft/taichi/pkg/skill"
 )
 
@@ -50,7 +51,7 @@ type Config struct {
 	// Envs is the map of environment definitions, keyed by env name.
 	Envs map[string]Env `mapstructure:"envs"`
 	// Skills is the list of skill configs.
-	Skills []skill.SkillConfig `mapstructure:"skills"`
+	Skills []skill.Config `mapstructure:"skills"`
 	// Report is the report output config.
 	Report Report `mapstructure:"report"`
 	// Autofix is the auto-fix config.
@@ -202,8 +203,8 @@ func (c *Config) ProjectByName(name string) (Project, error) {
 }
 
 // SkillConfigsByName returns a map from skill name to skill config.
-func (c *Config) SkillConfigsByName() map[string]skill.SkillConfig {
-	out := make(map[string]skill.SkillConfig, len(c.Skills))
+func (c *Config) SkillConfigsByName() map[string]skill.Config {
+	out := make(map[string]skill.Config, len(c.Skills))
 	for _, s := range c.Skills {
 		out[s.Name] = s
 	}

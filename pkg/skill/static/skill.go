@@ -14,7 +14,7 @@ import (
 
 // Skill is the static-asset test skill.
 type Skill struct {
-	cfg     skill.SkillConfig
+	cfg     skill.Config
 	pages   []string
 	assets  []string
 	timeout time.Duration
@@ -28,7 +28,7 @@ func (s *Skill) Name() string { return "static" }
 func (s *Skill) Kind() skill.Kind { return skill.KindStatic }
 
 // Configure implements skill.TestSkill. Parses the pages/assets/timeout fields from raw.
-func (s *Skill) Configure(cfg skill.SkillConfig) error {
+func (s *Skill) Configure(cfg skill.Config) error {
 	s.cfg = cfg
 	raw := cfg.Raw
 	if raw == nil {
@@ -44,13 +44,13 @@ func (s *Skill) Configure(cfg skill.SkillConfig) error {
 func (s *Skill) Priority() skill.Priority { return skill.PriorityNormal }
 
 // Setup implements skill.TestSkill.
-func (s *Skill) Setup(ctx *skill.SkillContext) error {
+func (s *Skill) Setup(ctx *skill.Context) error {
 	s.client = &http.Client{Timeout: s.timeout}
 	return nil
 }
 
 // Run implements skill.TestSkill.
-func (s *Skill) Run(ctx *skill.SkillContext) skill.SkillResult {
+func (s *Skill) Run(ctx *skill.Context) skill.Result {
 	start := time.Now()
 	asserts := ctx.Asserts
 
@@ -101,7 +101,7 @@ func (s *Skill) Run(ctx *skill.SkillContext) skill.SkillResult {
 	}
 
 	summary := ctx.Reporter.Summary()
-	return skill.SkillResult{
+	return skill.Result{
 		SkillName: s.Name(),
 		Duration:  time.Since(start),
 		Summary:   summary,
@@ -109,4 +109,4 @@ func (s *Skill) Run(ctx *skill.SkillContext) skill.SkillResult {
 }
 
 // Teardown implements skill.TestSkill.
-func (s *Skill) Teardown(ctx *skill.SkillContext) error { return nil }
+func (s *Skill) Teardown(ctx *skill.Context) error { return nil }

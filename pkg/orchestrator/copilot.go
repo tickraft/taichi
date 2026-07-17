@@ -46,7 +46,7 @@ type CopilotRound struct {
 	// TestResult is the test result of this round.
 	TestResult Result
 	// FailureContext is the failure context of this round (if any failures).
-	FailureContext *failure.FailureContext
+	FailureContext *failure.Context
 	// FixResult is the fix result returned by the Agent (if any).
 	FixResult *agent.FixResult
 	// ApplyError is the error encountered while applying the fix (if any).

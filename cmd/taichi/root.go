@@ -4,11 +4,12 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+
 	"github.com/tickraft/taichi/pkg/config"
 	"github.com/tickraft/taichi/pkg/i18n"
 	"github.com/tickraft/taichi/pkg/skill"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 // defaultEncoderConfig is the encoder config for taichi CLI console logs (colored, ISO time).
@@ -37,9 +38,30 @@ func newRootCmd() *cobra.Command {
 	gf := &globalFlags{}
 
 	root := &cobra.Command{
-		Use:          "taichi",
-		Short:        i18n.T("cli.root.short"),
-		Long:         i18n.T("cli.root.long"),
+		Use:   "taichi",
+		Short: "taichi test orchestration framework",
+		Long: `taichi is a general-purpose automated test orchestration framework.
+
+It provides a Skill extension mechanism, multi-environment lifecycle
+management, auto-fix, and multi-format report output.
+
+Describe the project under test, environments, and skills via a config
+file to orchestrate a complete test run. Built-in skills: API / gRPC /
+UI / Static / Regression. Register custom skills by implementing the
+pkg/skill.TestSkill interface.
+
+taichi supports bidirectional integration with AI Agents (e.g. Trae IDE):
+  - Acts as an MCP Server exposing taichi tools to AI Agents
+  - In copilot mode, invokes an AI Agent for code fixes, completing a
+    test → fix → regression loop
+
+Quick start:
+  taichi run --config configs/taichi.yaml
+  taichi list --config configs/taichi.yaml
+  taichi mcp --config configs/taichi.yaml
+  taichi copilot --config configs/taichi.yaml --agent-cli trae
+  taichi version
+`,
 		SilenceUsage: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// Apply the --locale flag (default auto triggers system environment detection).
@@ -52,11 +74,11 @@ func newRootCmd() *cobra.Command {
 	}
 
 	root.PersistentFlags().StringVarP(&gf.configPath, "config", "c", "configs/taichi.yaml",
-		i18n.T("cli.root.flag.config"))
+		"Config file path (YAML)")
 	root.PersistentFlags().StringVar(&gf.logLevel, "log-level", "info",
-		i18n.T("cli.root.flag.log_level"))
+		"Log level: debug / info / warn / error")
 	root.PersistentFlags().StringVar(&gf.locale, "locale", "auto",
-		i18n.T("cli.root.flag.locale"))
+		"UI language: auto / zh-CN / en-US (auto detects from system environment)")
 
 	root.AddCommand(
 		newRunCmd(gf),

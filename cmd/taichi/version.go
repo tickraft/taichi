@@ -5,6 +5,7 @@ import (
 	"runtime"
 
 	"github.com/spf13/cobra"
+
 	"github.com/tickraft/taichi/pkg/i18n"
 )
 
@@ -19,10 +20,10 @@ var Version = "0.1.0-dev"
 func newVersionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
-		Short: i18n.T("cli.version.short"),
-		Long:  i18n.T("cli.version.long"),
+		Short: "Print taichi version information",
+		Long:  "Print the taichi binary version, Go runtime version, and target platform.",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Fprintf(cmd.OutOrStdout(), "%s\n",
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s\n",
 				i18n.T("cli.version.format", Version, runtime.Version(), runtime.GOOS, runtime.GOARCH))
 		},
 	}

@@ -12,9 +12,9 @@ import (
 )
 
 // newTestContext builds a SkillContext backed by a fresh reporter and assertion engine.
-func newTestContext(t *testing.T, baseURL string) *skill.SkillContext {
+func newTestContext(t *testing.T, baseURL string) *skill.Context {
 	t.Helper()
-	return &skill.SkillContext{
+	return &skill.Context{
 		Ctx:         context.Background(),
 		ProjectName: "test-project",
 		BaseURL:     baseURL,
@@ -29,7 +29,7 @@ func newTestContext(t *testing.T, baseURL string) *skill.SkillContext {
 // configureAndSetup wires the skill with the given raw config and invokes Setup.
 func configureAndSetup(t *testing.T, s *Skill, raw map[string]any) {
 	t.Helper()
-	if err := s.Configure(skill.SkillConfig{Raw: raw}); err != nil {
+	if err := s.Configure(skill.Config{Raw: raw}); err != nil {
 		t.Fatalf("Configure: %v", err)
 	}
 	if err := s.Setup(nil); err != nil {
@@ -64,7 +64,7 @@ func TestPriority(t *testing.T) {
 // TestConfigureEmpty ensures Configure tolerates an empty raw map and produces no cases.
 func TestConfigureEmpty(t *testing.T) {
 	s := &Skill{}
-	if err := s.Configure(skill.SkillConfig{Raw: map[string]any{}}); err != nil {
+	if err := s.Configure(skill.Config{Raw: map[string]any{}}); err != nil {
 		t.Fatalf("Configure empty raw: %v", err)
 	}
 	if len(s.cases) != 0 {
@@ -75,7 +75,7 @@ func TestConfigureEmpty(t *testing.T) {
 // TestConfigureNil ensures Configure tolerates a nil raw map.
 func TestConfigureNil(t *testing.T) {
 	s := &Skill{}
-	if err := s.Configure(skill.SkillConfig{}); err != nil {
+	if err := s.Configure(skill.Config{}); err != nil {
 		t.Fatalf("Configure nil raw: %v", err)
 	}
 	if len(s.cases) != 0 {
@@ -102,7 +102,7 @@ func TestConfigureWithCases(t *testing.T) {
 			},
 		},
 	}
-	if err := s.Configure(skill.SkillConfig{Raw: raw}); err != nil {
+	if err := s.Configure(skill.Config{Raw: raw}); err != nil {
 		t.Fatalf("Configure: %v", err)
 	}
 	if s.timeout != 3*time.Second {
@@ -155,7 +155,7 @@ func TestConfigureSkipsInvalidCases(t *testing.T) {
 			map[string]any{"path": "/no-name"}, // name missing defaults to ""
 		},
 	}
-	if err := s.Configure(skill.SkillConfig{Raw: raw}); err != nil {
+	if err := s.Configure(skill.Config{Raw: raw}); err != nil {
 		t.Fatalf("Configure: %v", err)
 	}
 	if len(s.cases) != 1 {
@@ -169,7 +169,7 @@ func TestConfigureSkipsInvalidCases(t *testing.T) {
 // TestSetup verifies Setup creates an HTTP client without error.
 func TestSetup(t *testing.T) {
 	s := &Skill{}
-	if err := s.Configure(skill.SkillConfig{Raw: map[string]any{}}); err != nil {
+	if err := s.Configure(skill.Config{Raw: map[string]any{}}); err != nil {
 		t.Fatalf("Configure: %v", err)
 	}
 	if err := s.Setup(nil); err != nil {

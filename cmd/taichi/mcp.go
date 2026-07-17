@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/spf13/cobra"
+
 	"github.com/tickraft/taichi/pkg/i18n"
 	"github.com/tickraft/taichi/pkg/mcp"
 )
@@ -16,8 +17,17 @@ import (
 func newMCPCmd(gf *globalFlags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "mcp",
-		Short: i18n.T("cli.mcp.short"),
-		Long:  i18n.T("cli.mcp.long"),
+		Short: "Run as an MCP Server exposing taichi tools to AI Agents",
+		Long: `Runs as an MCP (Model Context Protocol) Server communicating with
+AI Agents via stdin/stdout.
+
+AI Agents (e.g. Trae IDE) can invoke the following tools via MCP:
+  - taichi_run        Run a test orchestration
+  - taichi_list       List projects, environments, and skills in the config
+  - taichi_failures   Get the failure context of the most recent run
+  - taichi_regression Run regression tests
+
+The protocol is JSON-RPC 2.0 over stdio with zero third-party deps.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runMCPServer(cmd, gf)
 		},

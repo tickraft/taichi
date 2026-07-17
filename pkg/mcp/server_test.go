@@ -662,7 +662,7 @@ func TestFormatRunResult(t *testing.T) {
 		Duration:    2 * time.Second,
 		Summary:     framework.TestSummary{Total: 5, Passed: 3, Failed: 1, Skipped: 1},
 		EnvLogPath:  "/tmp/env.log",
-		SkillResults: []skill.SkillResult{
+		SkillResults: []skill.Result{
 			{
 				SkillName: "api",
 				Duration:  100 * time.Millisecond,
@@ -713,7 +713,7 @@ func TestFormatRunResult(t *testing.T) {
 // empty string.
 func TestFormatRunResult_NilError(t *testing.T) {
 	r := orchestrator.Result{
-		SkillResults: []skill.SkillResult{
+		SkillResults: []skill.Result{
 			{SkillName: "static", Summary: framework.TestSummary{Total: 1, Passed: 1}},
 		},
 	}

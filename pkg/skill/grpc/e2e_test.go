@@ -13,16 +13,16 @@ import (
 // SkillContext, runs the skill, and returns the reporter snapshot + skill result.
 //
 // Each invocation gets its own reporter so cases from one test do not leak into another.
-func runSkillE2E(t *testing.T, raw map[string]any) ([]framework.TestResult, skill.SkillResult) {
+func runSkillE2E(t *testing.T, raw map[string]any) ([]framework.TestResult, skill.Result) {
 	t.Helper()
 
 	s := &Skill{}
-	if err := s.Configure(skill.SkillConfig{Raw: raw}); err != nil {
+	if err := s.Configure(skill.Config{Raw: raw}); err != nil {
 		t.Fatalf("Configure: %v", err)
 	}
 
 	reporter := framework.NewTestReporter()
-	ctx := &skill.SkillContext{
+	ctx := &skill.Context{
 		Ctx:         context.Background(),
 		ProjectName: "grpc-e2e",
 		Asserts:     framework.NewAssertionEngine(),

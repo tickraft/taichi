@@ -11,9 +11,9 @@ import (
 )
 
 // newTestContext builds a SkillContext backed by a fresh reporter and assertion engine.
-func newTestContext(t *testing.T, baseURL string) *skill.SkillContext {
+func newTestContext(t *testing.T, baseURL string) *skill.Context {
 	t.Helper()
-	return &skill.SkillContext{
+	return &skill.Context{
 		Ctx:         context.Background(),
 		ProjectName: "test-project",
 		BaseURL:     baseURL,
@@ -28,7 +28,7 @@ func newTestContext(t *testing.T, baseURL string) *skill.SkillContext {
 // configureAndSetup wires the skill with the given raw config and invokes Setup.
 func configureAndSetup(t *testing.T, s *Skill, raw map[string]any) {
 	t.Helper()
-	if err := s.Configure(skill.SkillConfig{Raw: raw}); err != nil {
+	if err := s.Configure(skill.Config{Raw: raw}); err != nil {
 		t.Fatalf("Configure: %v", err)
 	}
 	if err := s.Setup(nil); err != nil {
@@ -63,7 +63,7 @@ func TestPriority(t *testing.T) {
 // TestConfigureEmpty ensures Configure tolerates an empty raw map and produces no pages.
 func TestConfigureEmpty(t *testing.T) {
 	s := &Skill{}
-	if err := s.Configure(skill.SkillConfig{Raw: map[string]any{}}); err != nil {
+	if err := s.Configure(skill.Config{Raw: map[string]any{}}); err != nil {
 		t.Fatalf("Configure empty raw: %v", err)
 	}
 	if len(s.pages) != 0 {
@@ -84,7 +84,7 @@ func TestConfigureWithPages(t *testing.T) {
 			},
 		},
 	}
-	if err := s.Configure(skill.SkillConfig{Raw: raw}); err != nil {
+	if err := s.Configure(skill.Config{Raw: raw}); err != nil {
 		t.Fatalf("Configure: %v", err)
 	}
 	if len(s.pages) != 1 {
@@ -112,7 +112,7 @@ func TestConfigureSkipsEmptyPath(t *testing.T) {
 			map[string]any{"path": "/ok"},
 		},
 	}
-	if err := s.Configure(skill.SkillConfig{Raw: raw}); err != nil {
+	if err := s.Configure(skill.Config{Raw: raw}); err != nil {
 		t.Fatalf("Configure: %v", err)
 	}
 	if len(s.pages) != 1 {

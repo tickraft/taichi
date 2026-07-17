@@ -88,9 +88,14 @@ Recognized types:
 
 - `feat` — a new feature
 - `fix` — a bug fix
-- `docs` — documentation only
+- `perf` — a code change that improves performance
 - `refactor` — code change that neither fixes a bug nor adds a feature
+- `revert` — revert a previous commit
+- `docs` — documentation only
+- `style` — code style formatting (whitespace, formatting, missing semicolons, etc.)
 - `test` — adding or updating tests
+- `build` — build system or external dependencies (Makefile, go.mod, etc.)
+- `ci` — CI/CD pipeline configuration and scripts
 - `chore` — maintenance tasks, tooling, dependencies
 - `breaking` — a change that breaks backward compatibility (also use the `BREAKING CHANGE:` footer)
 

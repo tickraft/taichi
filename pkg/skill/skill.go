@@ -6,8 +6,8 @@
 // binary and external projects can extend capabilities by implementing this interface.
 //
 // Design principles:
-//   - Low coupling between skills: skills should not reference each other directly; all shared state flows through SkillContext.
-//   - Config-driven: skills receive configuration via SkillConfig, avoiding hardcoding.
+//   - Low coupling between skills: skills should not reference each other directly; all shared state flows through Context.
+//   - Config-driven: skills receive configuration via Config, avoiding hardcoding.
 //   - Hook mechanism: Setup/Teardown provide lifecycle hooks; Run is the execution core.
 package skill
 
@@ -52,9 +52,9 @@ const (
 	PriorityLow Priority = 30
 )
 
-// SkillConfig is the configuration view of a skill, injected after the taichi config file is loaded.
+// Config is the configuration view of a skill, injected after the taichi config file is loaded.
 // Skill implementations parse the Raw field into their own defined structures as needed.
-type SkillConfig struct {
+type Config struct {
 	// Name is the unique identifier of the skill, e.g. "api", "ui".
 	Name string
 	// Kind is the major skill category.
@@ -67,12 +67,12 @@ type SkillConfig struct {
 	Raw map[string]any
 }
 
-// SkillContext carries runtime state during skill execution: the base URL of the service
+// Context carries runtime state during skill execution: the base URL of the service
 // under test, the assertion engine, the reporter, the auto-fix engine, logger, and context cancellation.
 //
-// Skills should access shared resources through SkillContext rather than global variables,
+// Skills should access shared resources through Context rather than global variables,
 // ensuring low coupling and testability.
-type SkillContext struct {
+type Context struct {
 	// Ctx controls the skill execution lifecycle and supports graceful cancellation.
 	Ctx context.Context
 	// ProjectName is the name of the project under test (e.g. "tickraft").
@@ -135,8 +135,8 @@ type FixOutcome struct {
 	Message string
 }
 
-// SkillResult is the aggregated output of a skill execution.
-type SkillResult struct {
+// Result is the aggregated output of a skill execution.
+type Result struct {
 	// SkillName is the skill name.
 	SkillName string
 	// Duration is the total execution time of the skill.
@@ -151,31 +151,31 @@ type SkillResult struct {
 //
 // Lifecycle: Setup → Run → Teardown. Setup and Teardown are invoked even when Run fails.
 type TestSkill interface {
-	// Name returns the unique identifier of the skill; it should match SkillConfig.Name.
+	// Name returns the unique identifier of the skill; it should match Config.Name.
 	Name() string
 	// Kind returns the major skill category.
 	Kind() Kind
 	// Configure receives the skill config; the skill should parse the Raw field and initialize internal state here.
 	// Returning an error indicates invalid config and the skill will be disabled.
-	Configure(cfg SkillConfig) error
+	Configure(cfg Config) error
 	// Priority returns the execution priority. When explicitly set in config, the config value takes precedence.
 	Priority() Priority
 	// Setup runs before Run and is used to prepare resources (e.g. start a browser, load a case set).
-	Setup(ctx *SkillContext) error
+	Setup(ctx *Context) error
 	// Run is the execution core of the skill; test results are reported via ctx.Reporter.Record.
 	// Returning an error indicates a skill-level fatal error; per-case failures should be expressed via TestResult.Passed=false.
-	Run(ctx *SkillContext) SkillResult
+	Run(ctx *Context) Result
 	// Teardown runs after Run (whether it succeeded or failed) and is used to release resources.
 	// Any returned error is only logged and does not affect the final result.
-	Teardown(ctx *SkillContext) error
+	Teardown(ctx *Context) error
 }
 
 // Hook is an optional hook interface. Skills implementing it receive finer-grained lifecycle notifications.
 type Hook interface {
 	// BeforeAll is invoked once before all skills execute.
-	BeforeAll(ctx *SkillContext) error
+	BeforeAll(ctx *Context) error
 	// AfterAll is invoked once after all skills execute.
-	AfterAll(ctx *SkillContext) error
+	AfterAll(ctx *Context) error
 }
 
 // NoOpLogger is a no-op implementation of the Logger interface, convenient for tests or no-log scenarios.

@@ -16,17 +16,17 @@ type mockSkill struct {
 	priority skill.Priority
 }
 
-func (m *mockSkill) Name() string                      { return m.name }
-func (m *mockSkill) Kind() skill.Kind                  { return m.kind }
-func (m *mockSkill) Priority() skill.Priority          { return m.priority }
-func (m *mockSkill) Configure(skill.SkillConfig) error { return nil }
-func (m *mockSkill) Setup(*skill.SkillContext) error   { return nil }
+func (m *mockSkill) Name() string                 { return m.name }
+func (m *mockSkill) Kind() skill.Kind             { return m.kind }
+func (m *mockSkill) Priority() skill.Priority     { return m.priority }
+func (m *mockSkill) Configure(skill.Config) error { return nil }
+func (m *mockSkill) Setup(*skill.Context) error   { return nil }
 
-func (m *mockSkill) Run(*skill.SkillContext) skill.SkillResult {
-	return skill.SkillResult{}
+func (m *mockSkill) Run(*skill.Context) skill.Result {
+	return skill.Result{}
 }
 
-func (m *mockSkill) Teardown(*skill.SkillContext) error { return nil }
+func (m *mockSkill) Teardown(*skill.Context) error { return nil }
 
 // namesOfSkills is a small helper that extracts the Name() of each skill into a slice.
 func namesOfSkills(in []skill.TestSkill) []string {
@@ -218,7 +218,7 @@ func TestSelect(t *testing.T) {
 
 	t.Run("priority order ascending", func(t *testing.T) {
 		// Configs intentionally in non-sorted order; selection must sort by priority.
-		configs := []skill.SkillConfig{
+		configs := []skill.Config{
 			{Name: "c", Enabled: true},
 			{Name: "a", Enabled: true},
 			{Name: "b", Enabled: true},
@@ -242,7 +242,7 @@ func TestSelect(t *testing.T) {
 	t.Run("config overrides priority", func(t *testing.T) {
 		// Override b's priority to a value greater than c's so that b moves last.
 		// A non-zero cfg.Priority takes precedence over the skill's own priority.
-		configs := []skill.SkillConfig{
+		configs := []skill.Config{
 			{Name: "a", Enabled: true},
 			{Name: "b", Enabled: true, Priority: skill.Priority(40)}, // override; default was 20
 			{Name: "c", Enabled: true},
@@ -266,7 +266,7 @@ func TestSelect(t *testing.T) {
 	})
 
 	t.Run("disabled config not selected", func(t *testing.T) {
-		configs := []skill.SkillConfig{
+		configs := []skill.Config{
 			{Name: "a", Enabled: true},
 			{Name: "b", Enabled: false},
 			{Name: "c", Enabled: true},
@@ -286,7 +286,7 @@ func TestSelect(t *testing.T) {
 	})
 
 	t.Run("unregistered skill in missing", func(t *testing.T) {
-		configs := []skill.SkillConfig{
+		configs := []skill.Config{
 			{Name: "a", Enabled: true},
 			{Name: "ghost", Enabled: true},
 		}
@@ -323,7 +323,7 @@ func TestSelect(t *testing.T) {
 			}
 		}
 		// Pass configs in non-alphabetical order; expect selection to preserve it.
-		configs := []skill.SkillConfig{
+		configs := []skill.Config{
 			{Name: "z", Enabled: true},
 			{Name: "x", Enabled: true},
 			{Name: "y", Enabled: true},

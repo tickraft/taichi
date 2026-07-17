@@ -33,7 +33,7 @@ const (
 
 // Skill is the gRPC test skill.
 type Skill struct {
-	cfg     skill.SkillConfig
+	cfg     skill.Config
 	cases   []grpcCase
 	timeout time.Duration
 	// target is the default host:port derived from the first case or the skill config.
@@ -65,7 +65,7 @@ func (s *Skill) Name() string { return "grpc" }
 func (s *Skill) Kind() skill.Kind { return skill.KindGRPC }
 
 // Configure implements skill.TestSkill. Parses cases, target, insecure, timeout from raw.
-func (s *Skill) Configure(cfg skill.SkillConfig) error {
+func (s *Skill) Configure(cfg skill.Config) error {
 	s.cfg = cfg
 	raw := cfg.Raw
 	if raw == nil {
@@ -107,12 +107,12 @@ func (s *Skill) Configure(cfg skill.SkillConfig) error {
 func (s *Skill) Priority() skill.Priority { return skill.PriorityCritical }
 
 // Setup implements skill.TestSkill. No persistent resources are needed.
-func (s *Skill) Setup(ctx *skill.SkillContext) error {
+func (s *Skill) Setup(ctx *skill.Context) error {
 	return nil
 }
 
 // Run implements skill.TestSkill.
-func (s *Skill) Run(ctx *skill.SkillContext) skill.SkillResult {
+func (s *Skill) Run(ctx *skill.Context) skill.Result {
 	start := time.Now()
 	for _, c := range s.cases {
 		caseStart := time.Now()
@@ -121,7 +121,7 @@ func (s *Skill) Run(ctx *skill.SkillContext) skill.SkillResult {
 		skill.RecordResult(ctx.Reporter, c.Name, caseStart, passed, msg, err)
 	}
 	summary := ctx.Reporter.Summary()
-	return skill.SkillResult{
+	return skill.Result{
 		SkillName: s.Name(),
 		Duration:  time.Since(start),
 		Summary:   summary,
@@ -129,6 +129,6 @@ func (s *Skill) Run(ctx *skill.SkillContext) skill.SkillResult {
 }
 
 // Teardown implements skill.TestSkill.
-func (s *Skill) Teardown(ctx *skill.SkillContext) error {
+func (s *Skill) Teardown(ctx *skill.Context) error {
 	return nil
 }

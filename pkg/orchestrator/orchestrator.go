@@ -49,7 +49,7 @@ type Result struct {
 	// Summary is the aggregated test statistics.
 	Summary framework.TestSummary
 	// SkillResults is the execution result of each skill.
-	SkillResults []skill.SkillResult
+	SkillResults []skill.Result
 	// EnvLogPath is the env log path (if any).
 	EnvLogPath string
 	// ProjectRoot is the absolute path of the project under test's root directory.
@@ -196,7 +196,7 @@ func (o *Orchestrator) Run(ctx context.Context, opts Options) (Result, error) {
 			logger.Warnf(i18n.T("orchestrator.run.skill_configure_failed"), s.Name(), err)
 			continue
 		}
-		skillCtx := &skill.SkillContext{
+		skillCtx := &skill.Context{
 			Ctx:         ctx,
 			ProjectName: project.Name,
 			BaseURL:     baseURL,
@@ -259,10 +259,10 @@ func selectProject(cfg *config.Config, name string) (config.Project, error) {
 
 // buildSkillConfigs builds the skill config list for this run.
 // If filter is specified, only skills in filter are kept; otherwise the project skills field (empty means all) is used.
-func buildSkillConfigs(cfg *config.Config, project config.Project, filter []string) []skill.SkillConfig {
+func buildSkillConfigs(cfg *config.Config, project config.Project, filter []string) []skill.Config {
 	all := cfg.Skills
 	if len(project.Skills) > 0 {
-		filtered := make([]skill.SkillConfig, 0, len(project.Skills))
+		filtered := make([]skill.Config, 0, len(project.Skills))
 		want := make(map[string]struct{}, len(project.Skills))
 		for _, name := range project.Skills {
 			want[name] = struct{}{}
@@ -279,7 +279,7 @@ func buildSkillConfigs(cfg *config.Config, project config.Project, filter []stri
 		for _, name := range filter {
 			want[name] = struct{}{}
 		}
-		filtered := make([]skill.SkillConfig, 0, len(filter))
+		filtered := make([]skill.Config, 0, len(filter))
 		for _, s := range all {
 			if _, ok := want[s.Name]; ok {
 				filtered = append(filtered, s)
@@ -291,13 +291,13 @@ func buildSkillConfigs(cfg *config.Config, project config.Project, filter []stri
 }
 
 // findSkillConfig looks up the config for the given skill name in the config list.
-func findSkillConfigs(cfgs []skill.SkillConfig, name string) (skill.SkillConfig, bool) {
+func findSkillConfigs(cfgs []skill.Config, name string) (skill.Config, bool) {
 	for _, c := range cfgs {
 		if c.Name == name {
 			return c, true
 		}
 	}
-	return skill.SkillConfig{}, false
+	return skill.Config{}, false
 }
 
 // parseFormats converts a string list to a report.Format list. Returns nil when empty to trigger defaults.
@@ -358,7 +358,7 @@ func mapHint(h skill.ErrorTypeHint) autofix.ErrorType {
 //
 // Already-registered skills with the same name are not overwritten (allowing callers to pre-register overrides for plugin configs).
 // Plugin skill Configure is invoked later by the orchestrator; here only the instance is created.
-func (o *Orchestrator) registerPluginSkills(cfgs []skill.SkillConfig, logger skill.Logger) error {
+func (o *Orchestrator) registerPluginSkills(cfgs []skill.Config, logger skill.Logger) error {
 	for _, cfg := range cfgs {
 		if !cfg.Enabled {
 			continue

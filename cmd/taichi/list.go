@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+
 	"github.com/tickraft/taichi/pkg/config"
 	"github.com/tickraft/taichi/pkg/i18n"
 	"github.com/tickraft/taichi/pkg/registry"
@@ -14,8 +15,14 @@ import (
 func newListCmd(gf *globalFlags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: i18n.T("cli.list.short"),
-		Long:  i18n.T("cli.list.long"),
+		Short: "List projects, environments, and registered skills in the config",
+		Long: `Loads the config file and shows:
+  - Projects under test with their environment and skills
+  - Defined environments
+  - taichi built-in and registered custom skills
+
+Useful for verifying the config before a run.
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return listConfig(cmd, gf)
 		},
@@ -34,57 +41,57 @@ func listConfig(cmd *cobra.Command, gf *globalFlags) error {
 	out := cmd.OutOrStdout()
 
 	// 1. Projects.
-	fmt.Fprintf(out, "%s\n", i18n.T("cli.list.section.projects", len(cfg.Projects)))
+	_, _ = fmt.Fprintf(out, "%s\n", i18n.T("cli.list.section.projects", len(cfg.Projects)))
 	for _, p := range cfg.Projects {
-		fmt.Fprintf(out, "  - %s\n", p.Name)
+		_, _ = fmt.Fprintf(out, "  - %s\n", p.Name)
 		if p.Root != "" {
-			fmt.Fprintf(out, "      %s:   %s\n", i18n.T("cli.list.label.root"), p.Root)
+			_, _ = fmt.Fprintf(out, "      %s:   %s\n", i18n.T("cli.list.label.root"), p.Root)
 		}
 		if p.Env != "" {
-			fmt.Fprintf(out, "      %s:    %s\n", i18n.T("cli.list.label.env"), p.Env)
+			_, _ = fmt.Fprintf(out, "      %s:    %s\n", i18n.T("cli.list.label.env"), p.Env)
 		}
 		if len(p.Skills) > 0 {
-			fmt.Fprintf(out, "      %s: %v\n", i18n.T("cli.list.label.skills"), p.Skills)
+			_, _ = fmt.Fprintf(out, "      %s: %v\n", i18n.T("cli.list.label.skills"), p.Skills)
 		} else {
-			fmt.Fprintf(out, "      %s: %s\n", i18n.T("cli.list.label.skills"), i18n.T("cli.list.label.skills_all"))
+			_, _ = fmt.Fprintf(out, "      %s: %s\n", i18n.T("cli.list.label.skills"), i18n.T("cli.list.label.skills_all"))
 		}
 	}
 
 	// 2. Environments.
-	fmt.Fprintf(out, "\n%s\n", i18n.T("cli.list.section.envs", len(cfg.Envs)))
+	_, _ = fmt.Fprintf(out, "\n%s\n", i18n.T("cli.list.section.envs", len(cfg.Envs)))
 	for name, e := range cfg.Envs {
-		fmt.Fprintf(out, "  - %s (kind=%s)\n", name, e.Kind)
+		_, _ = fmt.Fprintf(out, "  - %s (kind=%s)\n", name, e.Kind)
 		if e.Port != 0 {
-			fmt.Fprintf(out, "      %s:     %d\n", i18n.T("cli.list.label.port"), e.Port)
+			_, _ = fmt.Fprintf(out, "      %s:     %d\n", i18n.T("cli.list.label.port"), e.Port)
 		}
 		if e.BaseURL != "" {
-			fmt.Fprintf(out, "      %s: %s\n", i18n.T("cli.list.label.base_url"), e.BaseURL)
+			_, _ = fmt.Fprintf(out, "      %s: %s\n", i18n.T("cli.list.label.base_url"), e.BaseURL)
 		}
 		if e.BinaryPath != "" {
-			fmt.Fprintf(out, "      %s:   %s\n", i18n.T("cli.list.label.binary"), e.BinaryPath)
+			_, _ = fmt.Fprintf(out, "      %s:   %s\n", i18n.T("cli.list.label.binary"), e.BinaryPath)
 		}
 		if e.BuildTarget != "" {
-			fmt.Fprintf(out, "      %s:    %s\n", i18n.T("cli.list.label.build"), e.BuildTarget)
+			_, _ = fmt.Fprintf(out, "      %s:    %s\n", i18n.T("cli.list.label.build"), e.BuildTarget)
 		}
 		if e.HealthPath != "" {
-			fmt.Fprintf(out, "      %s:   %s\n", i18n.T("cli.list.label.health"), e.HealthPath)
+			_, _ = fmt.Fprintf(out, "      %s:   %s\n", i18n.T("cli.list.label.health"), e.HealthPath)
 		}
 		if e.Command != "" {
-			fmt.Fprintf(out, "      %s:  %s\n", i18n.T("cli.list.label.command"), e.Command)
+			_, _ = fmt.Fprintf(out, "      %s:  %s\n", i18n.T("cli.list.label.command"), e.Command)
 		}
 		if e.ReadyURL != "" {
-			fmt.Fprintf(out, "      %s:    %s\n", i18n.T("cli.list.label.ready"), e.ReadyURL)
+			_, _ = fmt.Fprintf(out, "      %s:    %s\n", i18n.T("cli.list.label.ready"), e.ReadyURL)
 		}
 	}
 
 	// 3. Skill configs.
-	fmt.Fprintf(out, "\n%s\n", i18n.T("cli.list.section.skill_cfgs", len(cfg.Skills)))
+	_, _ = fmt.Fprintf(out, "\n%s\n", i18n.T("cli.list.section.skill_cfgs", len(cfg.Skills)))
 	for _, sc := range cfg.Skills {
 		state := i18n.T("cli.list.state.disabled")
 		if sc.Enabled {
 			state = i18n.T("cli.list.state.enabled")
 		}
-		fmt.Fprintf(out, "  - %-12s %s=%-10s %s=%-3d %s\n",
+		_, _ = fmt.Fprintf(out, "  - %-12s %s=%-10s %s=%-3d %s\n",
 			sc.Name, i18n.T("cli.list.label.kind"), sc.Kind, i18n.T("cli.list.label.priority"), sc.Priority, state)
 	}
 
@@ -94,20 +101,20 @@ func listConfig(cmd *cobra.Command, gf *globalFlags) error {
 		_ = reg.Register(s, true)
 	}
 	registered := reg.List()
-	fmt.Fprintf(out, "\n%s\n", i18n.T("cli.list.section.registered", len(registered)))
+	_, _ = fmt.Fprintf(out, "\n%s\n", i18n.T("cli.list.section.registered", len(registered)))
 	for _, s := range registered {
-		fmt.Fprintf(out, "  - %-12s %s=%-10s %s=%-3d\n",
+		_, _ = fmt.Fprintf(out, "  - %-12s %s=%-10s %s=%-3d\n",
 			s.Name(), i18n.T("cli.list.label.kind"), s.Kind(), i18n.T("cli.list.label.priority"), s.Priority())
 	}
 
 	// 5. Report and autofix config.
-	fmt.Fprintf(out, "\n%s\n", i18n.T("cli.list.section.report"))
-	fmt.Fprintf(out, "  %s: %s\n", i18n.T("cli.list.label.suite_name"), cfg.Report.SuiteName)
-	fmt.Fprintf(out, "  %s: %s\n", i18n.T("cli.list.label.output_dir"), cfg.Report.OutputDir)
-	fmt.Fprintf(out, "  %s:    %v\n", i18n.T("cli.list.label.formats"), cfg.Report.Formats)
-	fmt.Fprintf(out, "\n%s\n", i18n.T("cli.list.section.autofix"))
-	fmt.Fprintf(out, "  %s:     %v\n", i18n.T("cli.list.label.enabled"), cfg.Autofix.Enabled)
-	fmt.Fprintf(out, "  %s: %s\n", i18n.T("cli.list.label.reports_dir"), cfg.Autofix.ReportsDir)
+	_, _ = fmt.Fprintf(out, "\n%s\n", i18n.T("cli.list.section.report"))
+	_, _ = fmt.Fprintf(out, "  %s: %s\n", i18n.T("cli.list.label.suite_name"), cfg.Report.SuiteName)
+	_, _ = fmt.Fprintf(out, "  %s: %s\n", i18n.T("cli.list.label.output_dir"), cfg.Report.OutputDir)
+	_, _ = fmt.Fprintf(out, "  %s:    %v\n", i18n.T("cli.list.label.formats"), cfg.Report.Formats)
+	_, _ = fmt.Fprintf(out, "\n%s\n", i18n.T("cli.list.section.autofix"))
+	_, _ = fmt.Fprintf(out, "  %s:     %v\n", i18n.T("cli.list.label.enabled"), cfg.Autofix.Enabled)
+	_, _ = fmt.Fprintf(out, "  %s: %s\n", i18n.T("cli.list.label.reports_dir"), cfg.Autofix.ReportsDir)
 
 	return nil
 }

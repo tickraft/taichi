@@ -36,7 +36,7 @@ func TestSkill_Configure(t *testing.T) {
 			},
 		},
 	}
-	if err := s.Configure(skill.SkillConfig{Raw: raw}); err != nil {
+	if err := s.Configure(skill.Config{Raw: raw}); err != nil {
 		t.Fatalf("Configure: %v", err)
 	}
 
@@ -94,7 +94,7 @@ func TestSkill_Configure(t *testing.T) {
 // TestSkill_ConfigureEmpty ensures Configure tolerates a nil raw map.
 func TestSkill_ConfigureEmpty(t *testing.T) {
 	s := &Skill{}
-	if err := s.Configure(skill.SkillConfig{}); err != nil {
+	if err := s.Configure(skill.Config{}); err != nil {
 		t.Fatalf("Configure with empty raw: %v", err)
 	}
 	if len(s.cases) != 0 {

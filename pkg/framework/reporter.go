@@ -262,18 +262,18 @@ func (r *TestReporter) PrintSummary(w io.Writer) {
 	copy(results, r.results)
 	r.mu.Unlock()
 
-	fmt.Fprintf(w, "\n%s\n", i18n.T("reporter.summary.title"))
-	fmt.Fprintf(w, "%s:   %d\n", i18n.T("reporter.summary.total"), summary.Total)
-	fmt.Fprintf(w, "%s:  %d\n", i18n.T("reporter.summary.passed"), summary.Passed)
-	fmt.Fprintf(w, "%s:  %d\n", i18n.T("reporter.summary.failed"), summary.Failed)
-	fmt.Fprintf(w, "%s: %d\n", i18n.T("reporter.summary.skipped"), summary.Skipped)
-	fmt.Fprintf(w, "%s: %s\n\n", i18n.T("reporter.summary.duration"), summary.Duration)
+	_, _ = fmt.Fprintf(w, "\n%s\n", i18n.T("reporter.summary.title"))
+	_, _ = fmt.Fprintf(w, "%s:   %d\n", i18n.T("reporter.summary.total"), summary.Total)
+	_, _ = fmt.Fprintf(w, "%s:  %d\n", i18n.T("reporter.summary.passed"), summary.Passed)
+	_, _ = fmt.Fprintf(w, "%s:  %d\n", i18n.T("reporter.summary.failed"), summary.Failed)
+	_, _ = fmt.Fprintf(w, "%s: %d\n", i18n.T("reporter.summary.skipped"), summary.Skipped)
+	_, _ = fmt.Fprintf(w, "%s: %s\n\n", i18n.T("reporter.summary.duration"), summary.Duration)
 
 	if len(results) == 0 {
 		return
 	}
-	fmt.Fprintf(w, "%-40s %-8s %-10s %s\n", i18n.T("reporter.table.test"), i18n.T("reporter.table.status"), i18n.T("reporter.table.duration"), i18n.T("reporter.table.message"))
-	fmt.Fprintf(w, "%s\n", repeat("-", 80))
+	_, _ = fmt.Fprintf(w, "%-40s %-8s %-10s %s\n", i18n.T("reporter.table.test"), i18n.T("reporter.table.status"), i18n.T("reporter.table.duration"), i18n.T("reporter.table.message"))
+	_, _ = fmt.Fprintf(w, "%s\n", repeat("-", 80))
 	for _, res := range results {
 		status := i18n.T("reporter.status.fail")
 		switch {
@@ -293,9 +293,9 @@ func (r *TestReporter) PrintSummary(w io.Writer) {
 		if len(msg) > 30 {
 			msg = msg[:27] + "..."
 		}
-		fmt.Fprintf(w, "%-40s %-8s %-10s %s\n", name, status, res.Duration, msg)
+		_, _ = fmt.Fprintf(w, "%-40s %-8s %-10s %s\n", name, status, res.Duration, msg)
 	}
-	fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w)
 }
 
 // computeSummaryLocked computes the summary for the given results without acquiring the mutex.

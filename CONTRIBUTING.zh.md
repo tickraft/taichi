@@ -86,9 +86,14 @@ make lint
 
 - `feat` — 新功能
 - `fix` — Bug 修复
-- `docs` — 仅文档
+- `perf` — 提升性能的代码变更
 - `refactor` — 既不修复 bug 也不新增功能的代码变更
+- `revert` — 回退之前的提交
+- `docs` — 仅文档
+- `style` — 代码风格格式化（空格、格式、缺失分号等）
 - `test` — 新增或更新测试
+- `build` — 构建系统或外部依赖（Makefile、go.mod 等）
+- `ci` — CI/CD 流水线配置与脚本
 - `chore` — 维护任务、工具、依赖
 - `breaking` — 破坏向后兼容的变更（同时使用 `BREAKING CHANGE:` 页脚）
 

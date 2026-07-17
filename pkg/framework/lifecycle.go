@@ -374,7 +374,7 @@ func FreePort() (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("listen: %w", err)
 	}
-	defer l.Close()
+	defer func() { _ = l.Close() }()
 	addr, ok := l.Addr().(*net.TCPAddr)
 	if !ok {
 		return 0, fmt.Errorf("unexpected address type: %T", l.Addr())

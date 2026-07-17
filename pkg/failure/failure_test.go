@@ -234,25 +234,25 @@ func TestFromResultsTimestampIsUTC(t *testing.T) {
 // TestHasFailures covers the nil receiver, empty, nil-slice, and populated cases.
 func TestHasFailures(t *testing.T) {
 	t.Run("nil receiver", func(t *testing.T) {
-		var fc *FailureContext
+		var fc *Context
 		if fc.HasFailures() {
 			t.Error("nil receiver HasFailures() = true, want false")
 		}
 	})
 	t.Run("empty failed cases", func(t *testing.T) {
-		fc := &FailureContext{}
+		fc := &Context{}
 		if fc.HasFailures() {
 			t.Error("empty FailedCases HasFailures() = true, want false")
 		}
 	})
 	t.Run("nil failed cases slice", func(t *testing.T) {
-		fc := &FailureContext{FailedCases: nil}
+		fc := &Context{FailedCases: nil}
 		if fc.HasFailures() {
 			t.Error("nil FailedCases HasFailures() = true, want false")
 		}
 	})
 	t.Run("with failures", func(t *testing.T) {
-		fc := &FailureContext{
+		fc := &Context{
 			FailedCases: []FailedCase{{Name: "t1", Message: "fail"}},
 		}
 		if !fc.HasFailures() {
@@ -268,7 +268,7 @@ func TestHasFailures(t *testing.T) {
 // TestFailureContextJSONRoundTrip verifies that all fields survive a
 // marshal/unmarshal cycle, including nested FailedCase entries.
 func TestFailureContextJSONRoundTrip(t *testing.T) {
-	original := &FailureContext{
+	original := &Context{
 		ProjectName: "tickraft",
 		BaseURL:     "http://localhost:8080",
 		Timestamp:   "2026-07-17T12:00:00Z",
@@ -288,7 +288,7 @@ func TestFailureContextJSONRoundTrip(t *testing.T) {
 		t.Fatalf("Marshal returned error: %v", err)
 	}
 
-	var decoded FailureContext
+	var decoded Context
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		t.Fatalf("Unmarshal returned error: %v", err)
 	}
@@ -331,7 +331,7 @@ func TestFailureContextJSONRoundTrip(t *testing.T) {
 // TestFailureContextJSONFieldNames verifies that the JSON output uses the
 // snake_case field names defined by struct tags.
 func TestFailureContextJSONFieldNames(t *testing.T) {
-	fc := &FailureContext{
+	fc := &Context{
 		ProjectName: "p",
 		Timestamp:   "ts",
 		TotalCases:  1,
@@ -360,18 +360,18 @@ func TestFailureContextJSONFieldNames(t *testing.T) {
 	}
 }
 
-// TestFailureContextOMITEmpty verifies that optional FailureContext fields
+// TestFailureContextOMITEmpty verifies that optional Context fields
 // marked with omitempty are omitted when empty.
 func TestFailureContextOMITEmpty(t *testing.T) {
 	cases := []struct {
 		name   string
-		fc     *FailureContext
+		fc     *Context
 		expect string
 	}{
-		{"empty base_url", &FailureContext{ProjectName: "p", Timestamp: "t"}, `"base_url"`},
-		{"empty project_root", &FailureContext{ProjectName: "p", Timestamp: "t"}, `"project_root"`},
-		{"empty env_log_path", &FailureContext{ProjectName: "p", Timestamp: "t"}, `"env_log_path"`},
-		{"empty reports_dir", &FailureContext{ProjectName: "p", Timestamp: "t"}, `"reports_dir"`},
+		{"empty base_url", &Context{ProjectName: "p", Timestamp: "t"}, `"base_url"`},
+		{"empty project_root", &Context{ProjectName: "p", Timestamp: "t"}, `"project_root"`},
+		{"empty env_log_path", &Context{ProjectName: "p", Timestamp: "t"}, `"env_log_path"`},
+		{"empty reports_dir", &Context{ProjectName: "p", Timestamp: "t"}, `"reports_dir"`},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -389,7 +389,7 @@ func TestFailureContextOMITEmpty(t *testing.T) {
 // TestFailedCaseOMITEmpty verifies that empty SkillName and Error fields are
 // omitted from the serialized FailedCase JSON.
 func TestFailedCaseOMITEmpty(t *testing.T) {
-	fc := &FailureContext{
+	fc := &Context{
 		ProjectName: "p",
 		Timestamp:   "t",
 		FailedCases: []FailedCase{
@@ -412,7 +412,7 @@ func TestFailedCaseOMITEmpty(t *testing.T) {
 // TestFailureContextMarshalNilFailedCases verifies that a nil FailedCases slice
 // serializes to JSON null (standard Go encoding/json behavior).
 func TestFailureContextMarshalNilFailedCases(t *testing.T) {
-	fc := &FailureContext{ProjectName: "p", Timestamp: "t"} // FailedCases is nil
+	fc := &Context{ProjectName: "p", Timestamp: "t"} // FailedCases is nil
 	data, err := json.Marshal(fc)
 	if err != nil {
 		t.Fatalf("Marshal returned error: %v", err)
@@ -422,15 +422,15 @@ func TestFailureContextMarshalNilFailedCases(t *testing.T) {
 	}
 }
 
-// TestFailureContextEmptyStructJSON verifies that an empty FailureContext
+// TestFailureContextEmptyStructJSON verifies that an empty Context
 // survives a marshal/unmarshal round-trip with all zero values preserved.
 func TestFailureContextEmptyStructJSON(t *testing.T) {
-	fc := &FailureContext{}
+	fc := &Context{}
 	data, err := json.Marshal(fc)
 	if err != nil {
 		t.Fatalf("Marshal returned error: %v", err)
 	}
-	var decoded FailureContext
+	var decoded Context
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		t.Fatalf("Unmarshal returned error: %v", err)
 	}
@@ -451,7 +451,7 @@ func TestFailureContextEmptyStructJSON(t *testing.T) {
 // TestFailureContextLargePayload verifies serialization integrity with a
 // large number of failed cases.
 func TestFailureContextLargePayload(t *testing.T) {
-	fc := &FailureContext{
+	fc := &Context{
 		ProjectName: "big-project",
 		Timestamp:   "2026-07-17T00:00:00Z",
 		TotalCases:  1000,
@@ -470,7 +470,7 @@ func TestFailureContextLargePayload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Marshal returned error: %v", err)
 	}
-	var decoded FailureContext
+	var decoded Context
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		t.Fatalf("Unmarshal returned error: %v", err)
 	}
@@ -495,7 +495,7 @@ func TestFailureContextLargePayload(t *testing.T) {
 // TestWriteToFileNilReceiver verifies that calling WriteToFile on a nil
 // receiver returns an error mentioning the nil context.
 func TestWriteToFileNilReceiver(t *testing.T) {
-	var fc *FailureContext
+	var fc *Context
 	err := fc.WriteToFile(filepath.Join(t.TempDir(), "f.json"))
 	if err == nil {
 		t.Fatal("WriteToFile on nil receiver returned nil error")
@@ -511,7 +511,7 @@ func TestWriteToFileCreatesParentDir(t *testing.T) {
 	dir := t.TempDir()
 	// Use a nested path where the parent directory does not yet exist.
 	nested := filepath.Join(dir, "nested", "deep", "failure.json")
-	fc := &FailureContext{ProjectName: "p", Timestamp: "t"}
+	fc := &Context{ProjectName: "p", Timestamp: "t"}
 	if err := fc.WriteToFile(nested); err != nil {
 		t.Fatalf("WriteToFile returned error: %v", err)
 	}
@@ -521,11 +521,11 @@ func TestWriteToFileCreatesParentDir(t *testing.T) {
 }
 
 // TestWriteToFileContent verifies the written file contains indented JSON
-// that decodes back to the original FailureContext.
+// that decodes back to the original Context.
 func TestWriteToFileContent(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "failure.json")
-	fc := &FailureContext{
+	fc := &Context{
 		ProjectName: "tickraft",
 		Timestamp:   "2026-07-17T12:00:00Z",
 		TotalCases:  3,
@@ -541,7 +541,7 @@ func TestWriteToFileContent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadFile returned error: %v", err)
 	}
-	var decoded FailureContext
+	var decoded Context
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		t.Fatalf("Unmarshal returned error: %v", err)
 	}
@@ -569,7 +569,7 @@ func TestWriteToFileOverwriteExisting(t *testing.T) {
 	if err := os.WriteFile(path, []byte("stale"), 0o644); err != nil {
 		t.Fatalf("write stale content: %v", err)
 	}
-	fc := &FailureContext{ProjectName: "fresh", Timestamp: "t"}
+	fc := &Context{ProjectName: "fresh", Timestamp: "t"}
 	if err := fc.WriteToFile(path); err != nil {
 		t.Fatalf("WriteToFile returned error: %v", err)
 	}
@@ -577,7 +577,7 @@ func TestWriteToFileOverwriteExisting(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadFile returned error: %v", err)
 	}
-	var decoded FailureContext
+	var decoded Context
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		t.Fatalf("Unmarshal returned error: %v", err)
 	}
@@ -643,7 +643,7 @@ func TestReadFromFileEmptyFile(t *testing.T) {
 func TestWriteReadRoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "sub", "failure.json")
-	original := &FailureContext{
+	original := &Context{
 		ProjectName: "tickraft",
 		BaseURL:     "http://localhost:9090",
 		Timestamp:   "2026-07-17T08:30:00Z",
@@ -700,11 +700,11 @@ func TestWriteReadRoundTrip(t *testing.T) {
 }
 
 // TestWriteReadRoundTripEmpty verifies the round-trip behavior for an empty
-// FailureContext (all zero values).
+// Context (all zero values).
 func TestWriteReadRoundTripEmpty(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "empty-fc.json")
-	original := &FailureContext{} // all zero values
+	original := &Context{} // all zero values
 	if err := original.WriteToFile(path); err != nil {
 		t.Fatalf("WriteToFile returned error: %v", err)
 	}

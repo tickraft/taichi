@@ -54,7 +54,7 @@ type FixResult struct {
 // Implementations are responsible for sending the failure context to the AI Agent, waiting for the Agent to analyze, and returning the fix result.
 type Invoker interface {
 	// AnalyzeAndFix analyzes the failure context and returns the fix result.
-	AnalyzeAndFix(ctx context.Context, fc *failure.FailureContext) (*FixResult, error)
+	AnalyzeAndFix(ctx context.Context, fc *failure.Context) (*FixResult, error)
 	// Name returns a human-readable name for the invoker.
 	Name() string
 }
@@ -82,7 +82,7 @@ func (c *CLIInvoker) Name() string {
 
 // AnalyzeAndFix implements Invoker.
 // It passes the FailureContext as JSON via stdin to the command and reads the FixResult JSON from stdout.
-func (c *CLIInvoker) AnalyzeAndFix(ctx context.Context, fc *failure.FailureContext) (*FixResult, error) {
+func (c *CLIInvoker) AnalyzeAndFix(ctx context.Context, fc *failure.Context) (*FixResult, error) {
 	if fc == nil {
 		return nil, fmt.Errorf("nil failure context")
 	}
@@ -144,7 +144,7 @@ func (h *HTTPInvoker) Name() string {
 
 // AnalyzeAndFix implements Invoker.
 // It POSTs the FailureContext as JSON to the Endpoint and reads the FixResult JSON from the response body.
-func (h *HTTPInvoker) AnalyzeAndFix(ctx context.Context, fc *failure.FailureContext) (*FixResult, error) {
+func (h *HTTPInvoker) AnalyzeAndFix(ctx context.Context, fc *failure.Context) (*FixResult, error) {
 	if fc == nil {
 		return nil, fmt.Errorf("nil failure context")
 	}

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+
 	"github.com/tickraft/taichi/pkg/i18n"
 	"github.com/tickraft/taichi/pkg/orchestrator"
 	"github.com/tickraft/taichi/pkg/skill"
@@ -34,21 +35,26 @@ func newRunCmd(gf *globalFlags) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "run",
-		Short: i18n.T("cli.run.short"),
-		Long:  i18n.T("cli.run.long"),
+		Short: "Run a test orchestration according to the config file",
+		Long: `Loads the config file, starts the environment for the project under test,
+runs enabled skills in priority order, collects results, and generates
+JSON / JUnit XML / human-readable summary reports.
+
+Exit code: 0 if all pass; 1 if any failure or runtime error occurs.
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runOrchestrator(cmd, gf, rf)
 		},
 	}
 
 	cmd.Flags().StringVarP(&rf.project, "project", "p", "",
-		i18n.T("cli.run.flag.project"))
+		"Project name for this run (defaults to the first project in config)")
 	cmd.Flags().StringArrayVarP(&rf.skills, "skill", "s", nil,
-		i18n.T("cli.run.flag.skill"))
+		"Run only specified skills (repeatable, e.g. -s api -s ui)")
 	cmd.Flags().StringVar(&rf.reportsDir, "reports-dir", "",
-		i18n.T("cli.run.flag.reports_dir"))
+		"Override the report output directory in config")
 	cmd.Flags().DurationVar(&rf.timeout, "timeout", 0,
-		i18n.T("cli.run.flag.timeout"))
+		"Total timeout for this run (0 means no limit)")
 
 	return cmd
 }
@@ -101,17 +107,17 @@ func runOrchestrator(cmd *cobra.Command, gf *globalFlags, rf *runFlags) error {
 // printRunResult writes the run summary to stdout.
 func printRunResult(cmd *cobra.Command, r orchestrator.Result) {
 	out := cmd.OutOrStdout()
-	fmt.Fprintf(out, "\n%s\n", i18n.T("cli.run.output.header"))
-	fmt.Fprintf(out, "%s:  %s\n", i18n.T("cli.run.output.project"), r.ProjectName)
-	fmt.Fprintf(out, "%s:  %s\n", i18n.T("cli.run.output.baseurl"), r.BaseURL)
-	fmt.Fprintf(out, "%s: %s\n", i18n.T("cli.run.output.duration"), r.Duration)
-	fmt.Fprintf(out, "%s:  %s\n", i18n.T("cli.run.output.summary"),
+	_, _ = fmt.Fprintf(out, "\n%s\n", i18n.T("cli.run.output.header"))
+	_, _ = fmt.Fprintf(out, "%s:  %s\n", i18n.T("cli.run.output.project"), r.ProjectName)
+	_, _ = fmt.Fprintf(out, "%s:  %s\n", i18n.T("cli.run.output.baseurl"), r.BaseURL)
+	_, _ = fmt.Fprintf(out, "%s: %s\n", i18n.T("cli.run.output.duration"), r.Duration)
+	_, _ = fmt.Fprintf(out, "%s:  %s\n", i18n.T("cli.run.output.summary"),
 		i18n.T("cli.run.output.summary_format", r.Summary.Total, r.Summary.Passed, r.Summary.Failed, r.Summary.Skipped))
 	if r.EnvLogPath != "" {
-		fmt.Fprintf(out, "%s:   %s\n", i18n.T("cli.run.output.envlog"), r.EnvLogPath)
+		_, _ = fmt.Fprintf(out, "%s:   %s\n", i18n.T("cli.run.output.envlog"), r.EnvLogPath)
 	}
 	if len(r.SkillResults) > 0 {
-		fmt.Fprintf(out, "\n%s:\n", i18n.T("cli.run.output.skills"))
+		_, _ = fmt.Fprintf(out, "\n%s:\n", i18n.T("cli.run.output.skills"))
 		for _, sr := range r.SkillResults {
 			status := "OK"
 			if sr.Error != nil {
@@ -119,12 +125,12 @@ func printRunResult(cmd *cobra.Command, r orchestrator.Result) {
 			} else if sr.Summary.Failed > 0 {
 				status = "FAIL"
 			}
-			fmt.Fprintf(out, "  - %-12s %-6s %s (total=%d passed=%d failed=%d skipped=%d)\n",
+			_, _ = fmt.Fprintf(out, "  - %-12s %-6s %s (total=%d passed=%d failed=%d skipped=%d)\n",
 				sr.SkillName, status, sr.Duration,
 				sr.Summary.Total, sr.Summary.Passed, sr.Summary.Failed, sr.Summary.Skipped)
 		}
 	}
-	fmt.Fprintln(out)
+	_, _ = fmt.Fprintln(out)
 }
 
 // withSignalCancel returns a context that is cancelled on SIGINT / SIGTERM.
