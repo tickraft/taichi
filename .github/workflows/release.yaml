@@ -62,7 +62,7 @@ jobs:
           sha256sum taichi-* > checksums.sha256.txt
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.vars.outputs.VERSION }}
           name: ${{ steps.vars.outputs.VERSION }}
