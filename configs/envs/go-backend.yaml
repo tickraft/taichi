@@ -1,0 +1,53 @@
+# Go backend environment template (comparison of two approaches)
+#
+# Purpose: test orchestration for Go backend services. This file presents both
+# startup approaches; choose one as needed.
+# Applicable framework: any Go web framework (net/http / gin / echo / hertz, etc.).
+#
+# Usage:
+#   1. Merge the envs content for the desired approach into the envs: section
+#      of your taichi.yaml (note: env names must not contain dots).
+#   2. Reference the corresponding environment name in projects[].env
+#      (go-backend or go-backend-dev).
+#
+# ========================================================================
+# Approach 1 (recommended): pure Go binary, using the backend.go type
+# ------------------------------------------------------------------------
+# Applicable scenario: CI / formal testing. taichi automatically runs `go build`
+# to produce the binary and manages its lifecycle. Supports structured fields
+# such as build_target / config_path / addr_flag / health_path. Port can be
+# auto-allocated (port: 0); no need to write a startup command by hand.
+# ========================================================================
+#
+# envs:
+#   go-backend:
+#     kind: backend.go
+#     binary: bin/server            # Relative to project root; auto `go build` if missing
+#     build_target: ./cmd/server    # go build target
+#     config_path: configs/config.yaml
+#     config_flag: --config
+#     addr_flag: --addr             # Startup arg becomes --addr :<port>
+#     health_path: /api/v1/health
+#     healthy_timeout: 30s
+#     # port: 0                     # 0 = auto pick a free port; a concrete value pins the port
+#     # args: []                    # Extra command-line arguments
+#     # env: []                     # Extra environment variables (KEY=VALUE format)
+#
+# ========================================================================
+# Approach 2 (development): direct `go run`, using the custom type
+# ------------------------------------------------------------------------
+# Applicable scenario: rapid verification during local development. No need to
+# build the binary first; the command is just `go run`, but the port must be
+# explicitly specified in the command, with no auto port allocation.
+# ========================================================================
+
+envs:
+  go-backend-dev:
+    kind: custom
+    command: go run ./cmd/server --addr 127.0.0.1:8080
+    cwd: .
+    ready_url: http://127.0.0.1:8080/api/v1/health
+    # ready_text: ok                # Optional: marker text that the response body must contain; empty means only HTTP status is checked
+    # port: 8080                    # Port is already specified in the command; usually no need to set it again
+    env:
+      - APP_ENV=test

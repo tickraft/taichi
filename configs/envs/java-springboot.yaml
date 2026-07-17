@@ -1,0 +1,25 @@
+# Java (Spring Boot) process-based environment template
+#
+# Purpose: run a Spring Boot fat jar via `java -jar` for test orchestration
+# of Java backend services.
+# Applicable framework: Spring Boot 2.x / 3.x, JDK 17+ (Spring Boot 3 requires JDK 17).
+# Note: build the jar first via `mvn package` or `gradle bootJar` to produce target/app.jar.
+#
+# Usage:
+#   1. Merge the envs content below into the envs: section of your taichi.yaml
+#      (note: env names must not contain dots).
+#   2. Reference the environment name java-springboot in projects[].env.
+#   3. The /actuator/health endpoint is provided by spring-boot-starter-actuator,
+#      ready to use out of the box.
+
+envs:
+  java-springboot:
+    kind: custom
+    command: java -jar target/app.jar --server.port=8080
+    cwd: .
+    ready_url: http://127.0.0.1:8080/actuator/health
+    # ready_text: "status":"UP"   # Optional: marker text that the response body must contain; empty means only HTTP status is checked
+    # port: 8080                  # Port is already specified in the command; usually no need to set it again
+    env:
+      - SPRING_PROFILES_ACTIVE=test
+      - DB_URL=jdbc:postgresql://localhost/test

@@ -1,0 +1,23 @@
+# Python (FastAPI + Uvicorn) process-based environment template
+#
+# Purpose: launch a FastAPI application directly via uvicorn for test orchestration
+# of Python backend services.
+# Applicable framework: FastAPI (ASGI), Python 3.8+.
+#
+# Usage:
+#   1. Merge the envs content below into the envs: section of your taichi.yaml
+#      (note: env names must not contain dots).
+#   2. Reference the environment name python-fastapi in projects[].env.
+#   3. The /health endpoint must be implemented by the application (any 2xx response is fine).
+
+envs:
+  python-fastapi:
+    kind: custom
+    command: uvicorn app.main:app --host 127.0.0.1 --port 8000
+    cwd: .
+    ready_url: http://127.0.0.1:8000/health
+    # ready_text: ok              # Optional: marker text that the response body must contain; empty means only HTTP status is checked
+    # port: 8000                  # Port is already specified in the command; usually no need to set it again
+    env:
+      - APP_ENV=test
+      - DATABASE_URL=sqlite:///./test.db

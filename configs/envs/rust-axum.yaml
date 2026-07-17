@@ -1,0 +1,25 @@
+# Rust (Axum) process-based environment template
+#
+# Purpose: run an Axum backend directly via `cargo run` for test orchestration
+# of Rust web services.
+# Applicable framework: Axum (based on Tokio / Hyper), Rust stable.
+# Note: `cargo run` triggers an incremental build; the first start may be slow,
+# so allow enough time for healthy_timeout.
+#
+# Usage:
+#   1. Merge the envs content below into the envs: section of your taichi.yaml
+#      (note: env names must not contain dots).
+#   2. Reference the environment name rust-axum in projects[].env.
+#   3. The /health endpoint must be implemented by the application (any 2xx response is fine).
+
+envs:
+  rust-axum:
+    kind: custom
+    command: cargo run --bin api-server
+    cwd: .
+    ready_url: http://127.0.0.1:8080/health
+    # ready_text: ok              # Optional: marker text that the response body must contain; empty means only HTTP status is checked
+    # port: 8080                  # Port is specified inside the binary by default; usually no need to set it again
+    env:
+      - RUST_LOG=info
+      - DATABASE_URL=postgres://localhost/test

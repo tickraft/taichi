@@ -1,0 +1,23 @@
+# Python (Flask) process-based environment template
+#
+# Purpose: launch the Flask dev server via the flask CLI for test orchestration
+# of Python backend services.
+# Applicable framework: Flask 2.2+ (built-in `flask --app` startup), Python 3.8+.
+#
+# Usage:
+#   1. Merge the envs content below into the envs: section of your taichi.yaml
+#      (note: env names must not contain dots).
+#   2. Reference the environment name python-flask in projects[].env.
+#   3. The /health endpoint must be implemented by the application (any 2xx response is fine).
+
+envs:
+  python-flask:
+    kind: custom
+    command: flask --app app run --host 127.0.0.1 --port 5000
+    cwd: .
+    ready_url: http://127.0.0.1:5000/health
+    # ready_text: ok              # Optional: marker text that the response body must contain; empty means only HTTP status is checked
+    # port: 5000                  # Port is already specified in the command; usually no need to set it again
+    env:
+      - FLASK_ENV=testing
+      - DATABASE_URL=sqlite:///./test.db

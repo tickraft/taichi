@@ -1,0 +1,25 @@
+# Ruby (Rails) process-based environment template
+#
+# Purpose: launch a Rails backend via `bundle exec rails server` for test
+# orchestration of Ruby web services.
+# Applicable framework: Ruby on Rails 6+, Ruby 3.0+.
+#
+# Usage:
+#   1. Merge the envs content below into the envs: section of your taichi.yaml
+#      (note: env names must not contain dots).
+#   2. Reference the environment name ruby-rails in projects[].env.
+#   3. The /up endpoint is the built-in self-check endpoint of Rails 8
+#      (mounted by default in config/routes.rb);
+#      for older Rails versions, replace it with a custom /health route in your app.
+
+envs:
+  ruby-rails:
+    kind: custom
+    command: bundle exec rails server -p 3000
+    cwd: .
+    ready_url: http://127.0.0.1:3000/up
+    # ready_text: "Go Rails"      # Optional: marker text that the response body must contain; empty means only HTTP status is checked
+    # port: 3000                  # Port is already specified in the command; usually no need to set it again
+    env:
+      - RAILS_ENV=test
+      - DATABASE_URL=sqlite3:db/test.sqlite3

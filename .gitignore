@@ -17,6 +17,8 @@ coverage.*
 *.coverprofile
 profile.cov
 
+.DS_Store
+
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
@@ -28,8 +30,11 @@ go.work.sum
 .env
 
 # Editor/IDE
-# .idea/
-# .vscode/
+.idea/
+.vscode/
+
+# AI Agent
+.trae/
 
 bin/
 coverage.out
@@ -38,5 +43,3 @@ reports/*.json
 reports/*.xml
 reports/*.log
 !reports/.gitkeep
-.trae
-.vscode

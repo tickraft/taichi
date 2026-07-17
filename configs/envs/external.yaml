@@ -1,0 +1,24 @@
+# External managed service environment template
+#
+# Purpose: the service under test is externally managed (an already-deployed
+# staging / prod environment, a third-party SaaS API, etc.). taichi does not
+# start or stop it; it just accesses the service via base_url and runs test skills.
+# Applicable scenarios: smoke testing of integration environments, contract
+# regression against read-only production endpoints, verifying third-party API availability.
+#
+# Usage:
+#   1. Merge the envs content below into the envs: section of your taichi.yaml
+#      (note: env names must not contain dots).
+#   2. Reference the environment name external-api in projects[].env; this project
+#      does not need a root field.
+#   3. When base_url is non-empty, taichi skips the start/stop flow and sends
+#      test requests directly to that address.
+#   4. For authentication, it is recommended to pass a Token explicitly in the
+#      headers of skill cases, or inject it via env.
+
+envs:
+  external-api:
+    kind: custom
+    base_url: https://staging.example.com
+    # ready_url: http://...        # Not needed when base_url is non-empty; taichi does not perform a health check
+    # command: ...                 # Not needed when base_url is non-empty; taichi does not start a process

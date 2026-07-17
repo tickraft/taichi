@@ -1,0 +1,147 @@
+# taichi configuration template — environment reference
+#
+# This file demonstrates the complete syntax for all environment types and skill
+# options, for reference when creating a new project configuration.
+# Copy this file to taichi.yaml and trim as needed. Schema: see docs/configuration.md.
+
+# ========== Projects Under Test ==========
+# A single configuration may contain multiple projects, selected via `taichi run -p <name>`.
+projects:
+  - name: example-backend
+    root: ../my-go-service          # Project root directory (relative to this config file)
+    env: go-local                    # References a key in envs below
+    skills: [api, regression]        # Restrict this project to only these two skill types
+
+  - name: example-frontend
+    root: ../my-web-app
+    env: vite-local
+    skills: [ui, static]
+
+  - name: external-service
+    # No root: the service under test is externally managed and accessed only via base_url.
+    env: external
+    skills: [api]
+
+# ========== Environment Definitions ==========
+# Note: env names (map keys) must not contain dots (.), otherwise viper treats them
+# as nested key separators.
+envs:
+  # --- Go backend: auto build binary and start ---
+  go-local:
+    kind: backend.go
+    binary: bin/my-service           # Relative to project root; auto `go build` if missing
+    build_target: ./cmd/my-service   # go build target
+    config_path: configs/config.yaml
+    config_flag: --config
+    addr_flag: --addr                # Startup arg becomes --addr :<port>
+    health_path: /api/v1/health
+    healthy_timeout: 30s
+    port: 0                          # 0 = auto free port
+    args: [--debug]                  # Extra command-line arguments
+    env: [LOG_LEVEL=debug]           # Extra environment variables
+
+  # --- Node backend: reuse backend.* type, point to node binary or npm script ---
+  node-local:
+    kind: backend.node
+    binary: node                     # or npx tsx
+    build_target: ""                 # Node does not need `go build`; if empty, binary must already exist
+    args: [dist/index.js, --port, ":PORT:"]  # :PORT: placeholder is replaced with the actual port
+    health_path: /healthz
+    healthy_timeout: 20s
+
+  # --- Vite frontend: start dev server and wait for ready_url ---
+  vite-local:
+    kind: frontend.vite
+    command: pnpm dev                # Startup command (split by spaces into program + args)
+    cwd: .                           # Working directory relative to project root
+    ready_url: http://localhost:5173 # Poll this URL until 2xx/4xx
+    ready_text: ""                   # When non-empty, response body must also contain this substring
+    port: 5173
+
+  # --- Nuxt frontend ---
+  nuxt-local:
+    kind: frontend.nuxt
+    command: pnpm dev
+    cwd: .
+    ready_url: http://localhost:3000
+    port: 3000
+
+  # --- Externally managed: service is already running, taichi just accesses it; no start/stop ---
+  external:
+    kind: backend.go                 # kind is just a placeholder here; non-empty base_url skips startup
+    base_url: https://api.example.com
+
+# ========== Skill Configuration ==========
+skills:
+  - name: api
+    kind: api
+    enabled: true
+    priority: 0                      # Lower numbers run first
+    raw:
+      timeout: 5s
+      cases:
+        - name: Health
+          method: GET
+          path: /api/v1/health
+          expected_status: 200
+          expected_code: 0           # Expected value of the unified response code field
+          expected_field: data.status
+          expected_value: healthy
+          max_latency: 500ms
+        - name: CreateUser
+          method: POST               # Note: HTTPRequest currently does not carry a body; POST only checks status
+          path: /api/v1/users
+          expected_status: 201
+
+  - name: ui
+    kind: ui
+    enabled: true
+    priority: 10
+    raw:
+      timeout: 5s
+      pages:
+        - path: /
+          contains: [<html, <div id="app"]
+          max_latency: 2s
+        - path: /login
+          contains: [<html]
+
+  - name: static
+    kind: static
+    enabled: true
+    priority: 20
+    raw:
+      timeout: 5s
+      pages:
+        - /                          # Expect 200 + <html marker; 404 is treated as skip
+        - /nonexistent-page          # SPA fallback verification
+      assets:
+        - /favicon.ico               # Both 200 and 404 are treated as pass
+        - /assets/app.js
+
+  - name: regression
+    kind: regression
+    enabled: true
+    priority: 30                     # Regression tests run last
+    raw:
+      timeout: 5s
+      cases:
+        - name: CriticalHealth
+          path: /api/v1/health
+          expected_status: 200
+          expected_code: 0
+        - name: Homepage
+          path: /
+          expected_status: 200
+          skip_on_404: true          # When frontend is not built, 404 is treated as skip rather than failure
+
+# ========== Report Output ==========
+report:
+  suite_name: taichi-tests           # JUnit testsuite name and testcase classname
+  output_dir: reports                # Report output directory
+  formats: [json, junit, summary]    # Empty/omitted means all three are enabled by default
+
+# ========== Auto Fix ==========
+autofix:
+  enabled: false                     # When enabled, failed cases attempt service restart / rate-limit backoff / error report write
+  reports_dir: reports/errors        # Error report JSON output directory

@@ -1,0 +1,19 @@
+{
+  "name": "taichi-plugin-sdk",
+  "version": "0.1.0",
+  "description": "taichi 插件协议的 Node.js SDK，封装 stdin/stdout JSON 交换，仅依赖 Node 内置模块。",
+  "main": "taichi-plugin.js",
+  "scripts": {
+    "example": "node example.js"
+  },
+  "keywords": [
+    "taichi",
+    "plugin",
+    "sdk",
+    "testing"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=14"
+  }
+}

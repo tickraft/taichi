@@ -1,0 +1,186 @@
+# taichi default configuration — tickraft project
+#
+# This file is an out-of-the-box default configuration covering four test types
+# for the tickraft service: API / UI / static / regression.
+# Run `taichi run` or `make run` directly to launch a full test orchestration.
+#
+# Configuration schema: see pkg/config/config.go and docs/configuration.md.
+
+# ========== Projects Under Test ==========
+projects:
+  - name: tickraft
+    # Project root directory (relative to the directory of this config file).
+    # taichi will build and start the service in this directory.
+    root: ../../tickraft
+    # Environment name to use; references a key in the envs section below.
+    # Note: env names must not contain dots (.), otherwise viper treats them
+    # as nested key separators.
+    env: tickraft-backend
+    # List of enabled skill names. Empty or omitted means all skills with
+    # enabled=true in the skills section will be used.
+    skills: [api, ui, static, regression]
+
+# ========== Environment Definitions ==========
+envs:
+  tickraft-backend:
+    kind: backend.go
+    binary: bin/tickraft          # Relative to project root; auto `go build` if missing
+    build_target: ./cmd/tickraft  # go build target
+    config_path: configs/config.yaml
+    config_flag: --config
+    addr_flag: --addr
+    health_path: /api/v1/health
+    healthy_timeout: 30s
+    # port: 0                    # 0 = auto pick a free port; a concrete value pins the port
+    # args: []                   # Extra command-line arguments
+    # env: []                    # Extra environment variables (KEY=VALUE format)
+
+  # Frontend environment example (disabled by default, for template reference only).
+  # To test a frontend dev server independently, create a new project and set
+  # its env to this key.
+  tickraft-frontend:
+    kind: frontend.vite
+    command: pnpm dev
+    cwd: .
+    ready_url: http://localhost:3000
+    ready_text: ""               # Empty means only HTTP status < 500 is checked
+    port: 3000
+
+# ========== Skill Configuration ==========
+skills:
+  - name: api
+    kind: api
+    enabled: true
+    priority: 0
+    raw:
+      timeout: 5s
+      cases:
+        - name: Health
+          method: GET
+          path: /api/v1/health
+          expected_status: 200
+          expected_code: 0
+          expected_field: data.status
+          expected_value: healthy
+        - name: RegionDetect
+          method: GET
+          path: /api/v1/region/detect
+          headers:
+            CF-IPCountry: CN
+          expected_status: 200
+          expected_code: 0
+          expected_field: data.region
+          expected_value: cn
+        - name: DownloadsList
+          method: GET
+          path: /api/v1/downloads?platform=linux&arch=amd64
+          expected_status: 200
+          expected_code: 0
+        - name: DownloadsResolveNotFound
+          method: GET
+          path: /api/v1/downloads/v9.9.9/linux/amd64
+          expected_status: 404
+          expected_code: 1004
+        - name: DocsTOC
+          method: GET
+          path: /api/v1/docs/toc?lang=zh-CN
+          expected_status: 200
+          expected_code: 0
+          expected_field: data.lang
+          expected_value: zh-CN
+        - name: DocsSearchIndex
+          method: GET
+          path: /api/v1/docs/search-index?lang=zh-CN
+          expected_status: 200
+          expected_code: 0
+          expected_field: data.lang
+          expected_value: zh-CN
+        - name: DocsVersions
+          method: GET
+          path: /api/v1/docs/versions
+          expected_status: 200
+          expected_code: 0
+
+  - name: ui
+    kind: ui
+    enabled: true
+    priority: 10
+    raw:
+      timeout: 5s
+      pages:
+        - path: /
+          contains: [<html]
+          max_latency: 2s
+        - path: /product
+          contains: [<html]
+        - path: /pricing
+          contains: [<html]
+        - path: /download
+          contains: [<html]
+        - path: /enterprise
+          contains: [<html]
+        - path: /about
+          contains: [<html]
+        - path: /docs
+          contains: [<html]
+
+  - name: static
+    kind: static
+    enabled: true
+    priority: 20
+    raw:
+      timeout: 5s
+      pages:
+        - /
+        - /nonexistent-page-12345  # SPA fallback verification
+      assets:
+        - /.gitkeep
+        - /_nuxt/app.js
+
+  - name: regression
+    kind: regression
+    enabled: true
+    priority: 30
+    raw:
+      timeout: 5s
+      cases:
+        - name: Health
+          path: /api/v1/health
+          expected_status: 200
+          expected_code: 0
+        - name: RegionDetect
+          path: /api/v1/region/detect
+          expected_status: 200
+          expected_code: 0
+        - name: DownloadsList
+          path: /api/v1/downloads?platform=linux&arch=amd64
+          expected_status: 200
+          expected_code: 0
+        - name: DocsTOC
+          path: /api/v1/docs/toc?lang=zh-CN
+          expected_status: 200
+          expected_code: 0
+        - name: DocsVersions
+          path: /api/v1/docs/versions
+          expected_status: 200
+          expected_code: 0
+        - name: Homepage
+          path: /
+          expected_status: 200
+          skip_on_404: true        # When frontend is not built, 404 is treated as skip
+
+# ========== Report Output ==========
+report:
+  suite_name: taichi-tickraft
+  output_dir: reports
+  formats: [json, junit, summary]
+
+# ========== Auto Fix ==========
+autofix:
+  enabled: false                  # Disabled by default; when enabled, failed cases will
+                                  # attempt fixes such as service restart
+  reports_dir: reports/errors
+
+# ========== UI Locale ==========
+# locale: auto                    # auto / zh-CN / en-US (auto detects from system env vars)
+                                 # Can also be overridden via the --locale CLI flag (highest priority)

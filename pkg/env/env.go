@@ -1,0 +1,404 @@
+// Package env implements the lifecycle management of test environments.
+//
+// An environment is "the runtime state of the service under test": taichi starts
+// the environment before running skills and stops it after.
+// This package provides two environment implementations:
+//   - Backend: based on Go/Node binaries, reuses framework.ServiceLifecycle
+//   - Process: based on an arbitrary launch command (npm/pnpm dev server, uvicorn,
+//     cargo run, java -jar, etc.), started as a subprocess and waited until the
+//     ready URL becomes reachable. Serves both frontend.* and custom Kind.
+//
+// Environments are configured via EnvSpec (isomorphic to config.Env) and
+// orchestrated by the Manager.
+package env
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/tickraft/taichi/pkg/config"
+	"github.com/tickraft/taichi/pkg/framework"
+	"github.com/tickraft/taichi/pkg/i18n"
+)
+
+// EnvSpec is the runtime config of an environment, isomorphic to config.Env but
+// supplemented with fields needed at runtime.
+//
+// Converted from config.Env via NewSpec.
+type EnvSpec struct {
+	// Name is the unique identifier of the env (matching the config.Env map key).
+	Name string
+	// Kind is the major env category.
+	Kind config.EnvKind
+	// Port is the fixed listening port. 0 means auto.
+	Port int
+	// BaseURL is the base URL of an already-ready env. If non-empty, the Manager skips startup and uses it directly.
+	BaseURL string
+
+	// Backend fields (used when Kind=backend.*).
+	BinaryPath    string
+	BuildTarget   string
+	ConfigPath    string
+	ConfigFlag    string
+	AddrFlag      string
+	HealthPath    string
+	HealthyTimeout time.Duration
+	Args          []string
+	Env           []string
+
+	// Frontend fields (used when Kind=frontend.*).
+	Command    string
+	Cwd        string
+	ReadyURL   string
+	ReadyText  string
+}
+
+// NewSpec builds an EnvSpec from a config.Env.
+func NewSpec(name string, e config.Env) EnvSpec {
+	return EnvSpec{
+		Name:            name,
+		Kind:            e.Kind,
+		Port:            e.Port,
+		BaseURL:         e.BaseURL,
+		BinaryPath:      e.BinaryPath,
+		BuildTarget:     e.BuildTarget,
+		ConfigPath:      e.ConfigPath,
+		ConfigFlag:      e.ConfigFlag,
+		AddrFlag:        e.AddrFlag,
+		HealthPath:      e.HealthPath,
+		HealthyTimeout:  e.HealthyTimeoutDuration(),
+		Args:            e.Args,
+		Env:             e.Env,
+		Command:         e.Command,
+		Cwd:             e.Cwd,
+		ReadyURL:        e.ReadyURL,
+		ReadyText:       e.ReadyText,
+	}
+}
+
+// Environment is the abstraction for the env lifecycle.
+// Both Backend and Frontend implement this interface.
+type Environment interface {
+	// Start starts the env and waits until it is ready. Returns the BaseURL.
+	Start(ctx context.Context) (string, error)
+	// Stop stops the env.
+	Stop(ctx context.Context) error
+	// BaseURL returns the current BaseURL. Empty string when not started.
+	BaseURL() string
+	// LogPath returns the log file path (if any). Empty when there is no log.
+	LogPath() string
+}
+
+// New builds an Environment instance from spec and projectRoot.
+//
+// frontend.* and custom Kinds share the process-based implementation: as long as
+// command (launch command) and ready_url (health check URL) are provided, a service
+// in any language can be started (Python/Rust/Java/Ruby/Node backend, etc.).
+// Pure Go/Node binary services are recommended to use backend.* to get build and
+// port management capabilities.
+func New(spec EnvSpec, projectRoot string) (Environment, error) {
+	switch spec.Kind {
+	case config.EnvKindBackendGo, config.EnvKindBackendNode:
+		return newBackend(spec, projectRoot), nil
+	case config.EnvKindFrontendVite, config.EnvKindFrontendNuxt, config.EnvKindCustom:
+		return newProcessEnv(spec, projectRoot), nil
+	default:
+		return nil, errors.New(i18n.T("env.unknown_kind", spec.Kind))
+	}
+}
+
+// backend wraps framework.ServiceLifecycle to adapt it to the Environment interface.
+type backend struct {
+	lifecycle *framework.ServiceLifecycle
+	spec      EnvSpec
+	baseURL   string
+}
+
+func newBackend(spec EnvSpec, projectRoot string) *backend {
+	cfg := framework.ServiceConfig{
+		BinaryPath:          spec.BinaryPath,
+		BuildTarget:         spec.BuildTarget,
+		ConfigPath:          spec.ConfigPath,
+		ConfigFlag:          spec.ConfigFlag,
+		AddrFlag:            spec.AddrFlag,
+		Port:                spec.Port,
+		HealthPath:          spec.HealthPath,
+		HealthyTimeout:      spec.HealthyTimeout,
+		Args:                spec.Args,
+		Env:                 spec.Env,
+	}
+	lc := framework.NewServiceLifecycle(cfg)
+	if projectRoot != "" {
+		lc.SetProjectRoot(projectRoot)
+	}
+	return &backend{lifecycle: lc, spec: spec}
+}
+
+func (b *backend) Start(ctx context.Context) (string, error) {
+	if b.spec.BaseURL != "" {
+		b.baseURL = b.spec.BaseURL
+		return b.baseURL, nil
+	}
+	if err := b.lifecycle.Start(); err != nil {
+		return "", err
+	}
+	b.baseURL = b.lifecycle.BaseURL()
+	return b.baseURL, nil
+}
+
+func (b *backend) Stop(ctx context.Context) error {
+	if b.spec.BaseURL != "" {
+		// Externally managed env; do not stop.
+		return nil
+	}
+	return b.lifecycle.Stop()
+}
+
+func (b *backend) BaseURL() string {
+	return b.baseURL
+}
+
+func (b *backend) LogPath() string {
+	return b.lifecycle.ServerLogPath()
+}
+
+// processEnv manages a subprocess running an arbitrary launch command, treating
+// it as ready once the ready URL becomes reachable.
+//
+// Serves frontend.* and custom Kinds: the former targets JS toolchain dev servers
+// (npm/pnpm, etc.), while the latter targets service processes in any language
+// (uvicorn / cargo run / java -jar / rails server, etc.).
+// On stop, it first sends Interrupt; if the process does not exit within 10
+// seconds, it sends Kill.
+type processEnv struct {
+	spec        EnvSpec
+	projectRoot string
+	cmd         *exec.Cmd
+	logFile     *os.File
+	logPath     string
+	baseURL     string
+	mu          sync.Mutex
+}
+
+func newProcessEnv(spec EnvSpec, projectRoot string) *processEnv {
+	return &processEnv{spec: spec, projectRoot: projectRoot}
+}
+
+func (f *processEnv) Start(ctx context.Context) (string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	if f.spec.BaseURL != "" {
+		f.baseURL = f.spec.BaseURL
+		return f.baseURL, nil
+	}
+	if f.spec.Command == "" {
+		return "", errors.New(i18n.T("env.frontend.cmd_empty", f.spec.Name))
+	}
+
+	logPath, logFile, err := f.openLog()
+	if err != nil {
+		return "", err
+	}
+	f.logPath = logPath
+	f.logFile = logFile
+
+	parts := strings.Fields(f.spec.Command)
+	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
+	cmd.Stdout = logFile
+	cmd.Stderr = logFile
+	// cwd resolution: absolute path used directly; relative path resolved against projectRoot; both empty inherits the parent process's cwd.
+	switch {
+	case f.spec.Cwd == "":
+		// Inherit the parent process's working directory.
+	case filepath.IsAbs(f.spec.Cwd):
+		cmd.Dir = f.spec.Cwd
+	case f.projectRoot != "":
+		cmd.Dir = filepath.Join(f.projectRoot, f.spec.Cwd)
+	default:
+		cmd.Dir = f.spec.Cwd
+	}
+	if len(f.spec.Env) > 0 {
+		cmd.Env = append(os.Environ(), f.spec.Env...)
+	}
+	if err := cmd.Start(); err != nil {
+		_ = logFile.Close()
+		return "", fmt.Errorf("%s: %w", i18n.T("env.frontend.start_failed", f.spec.Name), err)
+	}
+	f.cmd = cmd
+
+	baseURL, err := f.waitForReady(ctx)
+	if err != nil {
+		_ = f.stopLocked()
+		return "", err
+	}
+	f.baseURL = baseURL
+	return baseURL, nil
+}
+
+func (f *processEnv) waitForReady(ctx context.Context) (string, error) {
+	if f.spec.ReadyURL == "" {
+		return "", errors.New(i18n.T("env.frontend.ready_url_empty", f.spec.Name))
+	}
+	baseURL := f.spec.ReadyURL
+	client := &http.Client{Timeout: 2 * time.Second}
+	deadline := ctx.Done()
+	timeout := time.After(60 * time.Second)
+	for {
+		select {
+		case <-deadline:
+			return "", ctx.Err()
+		case <-timeout:
+			return "", errors.New(i18n.T("env.frontend.not_ready", f.spec.Name))
+		default:
+		}
+		resp, err := client.Get(baseURL)
+		if err == nil {
+			body := make([]byte, 0)
+			if f.spec.ReadyText != "" {
+				buf := make([]byte, 4096)
+				n, _ := resp.Body.Read(buf)
+				body = buf[:n]
+				_ = resp.Body.Close()
+			} else {
+				_ = resp.Body.Close()
+			}
+			if resp.StatusCode >= 200 && resp.StatusCode < 500 {
+				if f.spec.ReadyText == "" || strings.Contains(string(body), f.spec.ReadyText) {
+					return baseURL, nil
+				}
+			}
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+}
+
+func (f *processEnv) Stop(ctx context.Context) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.stopLocked()
+}
+
+func (f *processEnv) stopLocked() error {
+	if f.cmd == nil || f.cmd.Process == nil {
+		return nil
+	}
+	_ = f.cmd.Process.Signal(os.Interrupt)
+	done := make(chan error, 1)
+	go func() {
+		done <- f.cmd.Wait()
+	}()
+	select {
+	case <-done:
+	case <-time.After(10 * time.Second):
+		_ = f.cmd.Process.Kill()
+		<-done
+	}
+	if f.logFile != nil {
+		_ = f.logFile.Close()
+		f.logFile = nil
+	}
+	f.cmd = nil
+	return nil
+}
+
+func (f *processEnv) BaseURL() string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.baseURL
+}
+
+func (f *processEnv) LogPath() string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.logPath
+}
+
+func (f *processEnv) openLog() (string, *os.File, error) {
+	dir := filepath.Join(f.projectRoot, "reports")
+	if f.projectRoot == "" {
+		dir = "reports"
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", nil, fmt.Errorf("create reports dir: %w", err)
+	}
+	name := fmt.Sprintf("frontend-%s-%s.log", f.spec.Name, time.Now().Format("20060102-150405"))
+	path := filepath.Join(dir, name)
+	file, err := os.Create(path)
+	if err != nil {
+		return "", nil, fmt.Errorf("create log file: %w", err)
+	}
+	return path, file, nil
+}
+
+// Manager manages the start/stop of the env for a single project.
+//
+// One Manager instance corresponds to a single test run. To reuse, stop the
+// current env first.
+type Manager struct {
+	env  Environment
+	spec EnvSpec
+}
+
+// NewManager creates a Manager from spec and projectRoot.
+func NewManager(spec EnvSpec, projectRoot string) (*Manager, error) {
+	e, err := New(spec, projectRoot)
+	if err != nil {
+		return nil, err
+	}
+	return &Manager{env: e, spec: spec}, nil
+}
+
+// Start starts the env and returns the BaseURL.
+func (m *Manager) Start(ctx context.Context) (string, error) {
+	return m.env.Start(ctx)
+}
+
+// Stop stops the env.
+func (m *Manager) Stop(ctx context.Context) error {
+	return m.env.Stop(ctx)
+}
+
+// BaseURL returns the current BaseURL.
+func (m *Manager) BaseURL() string {
+	return m.env.BaseURL()
+}
+
+// LogPath returns the env log path (if any).
+func (m *Manager) LogPath() string {
+	return m.env.LogPath()
+}
+
+// Spec returns the env config.
+func (m *Manager) Spec() EnvSpec {
+	return m.spec
+}
+
+// FreePort returns a free TCP port (exposed for use by config generators).
+func FreePort() (int, error) {
+	return findFreePort()
+}
+
+// findFreePort has the same implementation as framework.findFreePort but is
+// duplicated here to avoid a circular dependency.
+func findFreePort() (int, error) {
+	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+	if err != nil {
+		return 0, err
+	}
+	l, err := net.ListenTCP("tcp", addr)
+	if err != nil {
+		return 0, err
+	}
+	defer l.Close()
+	return l.Addr().(*net.TCPAddr).Port, nil
+}

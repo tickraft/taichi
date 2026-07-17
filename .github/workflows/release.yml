@@ -1,0 +1,74 @@
+# Release: build cross-platform binaries and publish a GitHub Release on tag push.
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+          cache: true
+
+      - name: Parse version from tag
+        id: vars
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build cross-platform binaries
+        env:
+          VERSION: ${{ steps.vars.outputs.VERSION }}
+        run: |
+          set -e
+          mkdir -p dist
+          TARGETS="
+            linux/amd64
+            linux/arm64
+            darwin/amd64
+            darwin/arm64
+            windows/amd64
+            windows/arm64
+          "
+          for target in $TARGETS; do
+            os="${target%/*}"
+            arch="${target#*/}"
+            output="dist/taichi-${os}-${arch}"
+            if [ "$os" = "windows" ]; then
+              output="${output}.exe"
+            fi
+            echo "Building $output"
+            CGO_ENABLED=0 GOOS=$os GOARCH=$arch \
+              go build -trimpath -ldflags "-s -w -X main.Version=${VERSION}" \
+              -o "$output" ./cmd/taichi
+          done
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum taichi-* > checksums.sha256.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.vars.outputs.VERSION }}
+          name: ${{ steps.vars.outputs.VERSION }}
+          generate_release_notes: true
+          files: |
+            dist/taichi-*
+            dist/checksums.sha256.txt
+          draft: false
+          prerelease: ${{ contains(steps.vars.outputs.VERSION, '-') }}

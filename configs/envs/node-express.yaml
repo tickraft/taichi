@@ -1,0 +1,25 @@
+# Node.js (Express) process-based environment template
+#
+# Purpose: launch an Express backend by running the entry script directly via node,
+# for test orchestration of Node web services.
+# Applicable framework: Express 4/5, Node.js 18+.
+#
+# Usage:
+#   1. Merge the envs content below into the envs: section of your taichi.yaml
+#      (note: env names must not contain dots).
+#   2. Reference the environment name node-express in projects[].env.
+#   3. The /health endpoint must be implemented by the application (any 2xx response is fine).
+#   4. You may also change command to `npm start` or `pnpm start` and let package.json
+#      scripts decide the entry point.
+
+envs:
+  node-express:
+    kind: custom
+    command: node src/server.js
+    cwd: .
+    ready_url: http://127.0.0.1:3000/health
+    # ready_text: ok              # Optional: marker text that the response body must contain; empty means only HTTP status is checked
+    # port: 3000                  # Port is specified inside the script by default; usually no need to set it again
+    env:
+      - NODE_ENV=test
+      - DATABASE_URL=sqlite:./test.db

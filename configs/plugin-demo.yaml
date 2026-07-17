@@ -1,0 +1,31 @@
+# taichi plugin skill example configuration
+# Validates third-party plugin integration; extends test skills without writing Go code.
+
+projects:
+  - name: plugin-demo
+    root: .
+    env: ""
+    skills: [example-bash]
+
+skills:
+  - name: example-bash
+    kind: plugin
+    enabled: true
+    priority: 40
+    raw:
+      command: ./examples/plugin-example.sh
+      timeout: 10s
+      # The custom fields below are passed through to the config object of the plugin's stdin JSON
+      checks:
+        - name: EchoCheck
+          expect: "ok"
+
+report:
+  suite_name: taichi-plugin-demo
+  output_dir: reports
+  formats: [json, summary]
+
+autofix:
+  enabled: false
+
+locale: auto
