@@ -685,9 +685,9 @@ skills:
 `)
 	o := New()
 	_, err := o.Run(context.Background(), Options{
-		ConfigPath:   configPath,
-		ProjectName:  "beta",
-		ReportsDir:   t.TempDir(),
+		ConfigPath:  configPath,
+		ProjectName: "beta",
+		ReportsDir:  t.TempDir(),
 	})
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -1540,10 +1540,10 @@ skills:
 		name: "test-invoker",
 		results: []*agent.FixResult{
 			{
-				Fixed:        true,
-				Mode:         agent.FixModeDirect,
+				Fixed:         true,
+				Mode:          agent.FixModeDirect,
 				ModifiedFiles: []string{"fixed.go"},
-				Message:      "fixed the issue",
+				Message:       "fixed the issue",
 			},
 		},
 	}
@@ -1951,10 +1951,10 @@ skills:
 		name: "direct-invoker",
 		results: []*agent.FixResult{
 			{
-				Fixed:        true,
-				Mode:         agent.FixModeDirect,
+				Fixed:         true,
+				Mode:          agent.FixModeDirect,
 				ModifiedFiles: []string{"main.go"},
-				Message:      "directly modified",
+				Message:       "directly modified",
 			},
 		},
 	}
@@ -2211,8 +2211,8 @@ skills:
 			ConfigPath: configPath,
 			ReportsDir: t.TempDir(),
 		},
-		Invoker:       invoker,
-		PatchApplier:  customApplier,
+		Invoker:      invoker,
+		PatchApplier: customApplier,
 	})
 	if err != nil {
 		t.Fatalf("RunCopilot error: %v", err)

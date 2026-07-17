@@ -98,21 +98,21 @@ type Env struct {
 	BaseURL string `mapstructure:"base_url"`
 
 	// Backend fields (used when Kind=backend.*).
-	BinaryPath    string `mapstructure:"binary"`
-	BuildTarget   string `mapstructure:"build_target"`
-	ConfigPath    string `mapstructure:"config_path"`
-	ConfigFlag    string `mapstructure:"config_flag"`
-	AddrFlag      string `mapstructure:"addr_flag"`
-	HealthPath    string `mapstructure:"health_path"`
-	HealthyTimeout string `mapstructure:"healthy_timeout"`
-	Args          []string `mapstructure:"args"`
-	Env           []string `mapstructure:"env"`
+	BinaryPath     string   `mapstructure:"binary"`
+	BuildTarget    string   `mapstructure:"build_target"`
+	ConfigPath     string   `mapstructure:"config_path"`
+	ConfigFlag     string   `mapstructure:"config_flag"`
+	AddrFlag       string   `mapstructure:"addr_flag"`
+	HealthPath     string   `mapstructure:"health_path"`
+	HealthyTimeout string   `mapstructure:"healthy_timeout"`
+	Args           []string `mapstructure:"args"`
+	Env            []string `mapstructure:"env"`
 
 	// Frontend fields (used when Kind=frontend.*).
-	Command    string `mapstructure:"command"`
-	Cwd        string `mapstructure:"cwd"`
-	ReadyURL   string `mapstructure:"ready_url"`
-	ReadyText  string `mapstructure:"ready_text"`
+	Command   string `mapstructure:"command"`
+	Cwd       string `mapstructure:"cwd"`
+	ReadyURL  string `mapstructure:"ready_url"`
+	ReadyText string `mapstructure:"ready_text"`
 }
 
 // HealthyTimeoutDuration parses the healthy_timeout field into a time.Duration. Returns 0 when empty.

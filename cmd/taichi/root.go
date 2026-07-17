@@ -37,9 +37,9 @@ func newRootCmd() *cobra.Command {
 	gf := &globalFlags{}
 
 	root := &cobra.Command{
-		Use:   "taichi",
-		Short: i18n.T("cli.root.short"),
-		Long:  i18n.T("cli.root.long"),
+		Use:          "taichi",
+		Short:        i18n.T("cli.root.short"),
+		Long:         i18n.T("cli.root.long"),
 		SilenceUsage: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// Apply the --locale flag (default auto triggers system environment detection).
@@ -61,6 +61,7 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(
 		newRunCmd(gf),
 		newListCmd(gf),
+		newValidateCmd(gf),
 		newVersionCmd(),
 		newMCPCmd(gf),
 		newCopilotCmd(gf),

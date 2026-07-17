@@ -1,102 +1,16 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<svg
-   viewBox="0 0 512 512"
-   width="512"
-   height="512"
-   version="1.1"
-   id="svg29"
-   sodipodi:docname="logo.svg"
-   inkscape:version="1.1.1 (c3084ef, 2021-09-22)"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg">
-  <defs
-     id="defs33" />
-  <sodipodi:namedview
-     id="namedview31"
-     pagecolor="#ffffff"
-     bordercolor="#666666"
-     borderopacity="1.0"
-     inkscape:pageshadow="2"
-     inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
-     showgrid="false"
-     showguides="false"
-     inkscape:zoom="1.0605469"
-     inkscape:cx="256"
-     inkscape:cy="256"
-     inkscape:window-width="1440"
-     inkscape:window-height="769"
-     inkscape:window-x="0"
-     inkscape:window-y="30"
-     inkscape:window-maximized="1"
-     inkscape:current-layer="svg29" />
-  <!-- 太极主体背景圆（阴半，近黑） -->
-  <circle
-     cx="256"
-     cy="256"
-     r="200"
-     fill="#0F172A"
-     id="circle9" />
-  <!-- 太极阳半（纯白，右半大圆 + S 曲线分割） -->
-  <path
-     d="M 256 56 A 200 200 0 0 1 256 456 A 100 100 0 0 0 256 256 A 100 100 0 0 1 256 56 Z"
-     fill="#FFFFFF"
-     id="path11" />
-  <!-- 上方眼：青绿色实心圆，呼应"测试通过=绿色" -->
-  <circle
-     cx="256"
-     cy="156"
-     r="28"
-     fill="#00D9A3"
-     id="circle13" />
-  <!-- 下方眼：白色实心，阳的种子在阴半中，高对比可见 -->
-  <circle
-     cx="256"
-     cy="356"
-     r="28"
-     fill="#FFFFFF"
-     id="circle15" />
-  <!-- 轨道层：围绕太极主体外框（r=220），线不接触点 -->
-  <!-- 右半轨道（阳半一侧）：点与线使用深色 -->
-  <circle
-     cx="476"
-     cy="256"
-     r="10"
-     fill="#0F172A"
-     id="circle17" />
-  <circle
-     cx="256"
-     cy="36"
-     r="10"
-     fill="#0F172A"
-     id="circle19" />
-  <path
-     d="M 276 42 A 220 220 0 0 1 466 236"
-     fill="none"
-     stroke="#0F172A"
-     stroke-width="3"
-     stroke-linecap="round"
-     id="path21" />
-  <!-- 左半轨道（阴半一侧）：点与线使用白色 -->
-  <circle
-     cx="36"
-     cy="256"
-     r="10"
-     fill="#FFFFFF"
-     id="circle23" />
-  <circle
-     cx="256"
-     cy="476"
-     r="10"
-     fill="#FFFFFF"
-     id="circle25" />
-  <path
-     d="M 236 470 A 220 220 0 0 1 46 276"
-     fill="none"
-     stroke="#FFFFFF"
-     stroke-width="3"
-     stroke-linecap="round"
-     id="path27" />
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" width="512" height="512">
+  <!-- 方案4 · 青绿双环：青色+翠绿双色环交错（编排轨道）+ 中心太极 -->
+  <!-- 外环1：青色 270° 弧 -->
+  <path d="M256,36 A220,220 0 1,1 36,256" stroke="#30B0C7" stroke-width="20" stroke-linecap="round" fill="none"/>
+  <!-- 外环2：翠绿 270° 弧（反向偏移） -->
+  <path d="M256,68 A188,188 0 1,0 444,256" stroke="#34C759" stroke-width="10" stroke-linecap="round" fill="none"/>
+  <!-- 太极阴半 -->
+  <circle cx="256" cy="256" r="148" fill="#1D1D1F"/>
+  <path d="M256,108 A148,148 0 0,1 256,404 Z" fill="#F5F5F7"/>
+  <circle cx="256" cy="182" r="74" fill="#F5F5F7"/>
+  <circle cx="256" cy="330" r="74" fill="#1D1D1F"/>
+  <!-- 阴眼：青色 -->
+  <circle cx="256" cy="182" r="26" fill="#30B0C7"/>
+  <!-- 阳眼：翠绿 -->
+  <circle cx="256" cy="330" r="26" fill="#34C759"/>
 </svg>

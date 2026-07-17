@@ -981,8 +981,8 @@ func TestApplyResultNil(t *testing.T) {
 func TestApplyResultNotFixed(t *testing.T) {
 	pa := NewPatchApplier(t.TempDir())
 	result := &FixResult{
-		Fixed:  false,
-		Mode:   FixModePatch,
+		Fixed:   false,
+		Mode:    FixModePatch,
 		Message: "could not fix",
 	}
 	err := pa.ApplyResult(result)
@@ -1087,8 +1087,8 @@ func TestApplyResultDirectModeMissingFile(t *testing.T) {
 func TestApplyResultUnknownMode(t *testing.T) {
 	pa := NewPatchApplier(t.TempDir())
 	result := &FixResult{
-		Fixed:  true,
-		Mode:   FixMode("unknown"),
+		Fixed:   true,
+		Mode:    FixMode("unknown"),
 		Message: "ok",
 	}
 	err := pa.ApplyResult(result)

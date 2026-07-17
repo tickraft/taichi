@@ -6,7 +6,6 @@
 package api
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
@@ -24,15 +23,15 @@ type Skill struct {
 
 // apiCase is the configuration of a single API case.
 type apiCase struct {
-	Name           string         `mapstructure:"name"`
-	Method         string         `mapstructure:"method"`
-	Path           string         `mapstructure:"path"`
+	Name           string            `mapstructure:"name"`
+	Method         string            `mapstructure:"method"`
+	Path           string            `mapstructure:"path"`
 	Headers        map[string]string `mapstructure:"headers"`
-	ExpectedStatus int            `mapstructure:"expected_status"`
-	ExpectedCode   int            `mapstructure:"expected_code"`
-	ExpectedField  string         `mapstructure:"expected_field"`
-	ExpectedValue  any            `mapstructure:"expected_value"`
-	MaxLatency     string         `mapstructure:"max_latency"`
+	ExpectedStatus int               `mapstructure:"expected_status"`
+	ExpectedCode   int               `mapstructure:"expected_code"`
+	ExpectedField  string            `mapstructure:"expected_field"`
+	ExpectedValue  any               `mapstructure:"expected_value"`
+	MaxLatency     string            `mapstructure:"max_latency"`
 }
 
 // Name implements skill.TestSkill.
@@ -59,7 +58,7 @@ func (s *Skill) Configure(cfg skill.SkillConfig) error {
 					Name:           skill.GetString(m, "name", ""),
 					Method:         skill.GetString(m, "method", http.MethodGet),
 					Path:           skill.GetString(m, "path", ""),
-					Headers:        toStringMap(m["headers"]),
+					Headers:        skill.ToStringMap(m["headers"]),
 					ExpectedStatus: skill.GetInt(m, "expected_status", http.StatusOK),
 					ExpectedCode:   skill.GetInt(m, "expected_code", 0),
 					ExpectedField:  skill.GetString(m, "expected_field", ""),
@@ -155,20 +154,4 @@ func hasEnvelope(body []byte) bool {
 		return false
 	}
 	return framework.NewAssertionEngine().AssertJSONFieldsExist(body, "code").Passed
-}
-
-// toStringMap converts a map[string]any to a map[string]string.
-func toStringMap(v any) map[string]string {
-	if v == nil {
-		return nil
-	}
-	m, ok := v.(map[string]any)
-	if !ok {
-		return nil
-	}
-	out := make(map[string]string, len(m))
-	for k, val := range m {
-		out[k] = fmt.Sprintf("%v", val)
-	}
-	return out
 }

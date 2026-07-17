@@ -27,22 +27,22 @@ import (
 func TestNewSpec(t *testing.T) {
 	t.Run("full field mapping", func(t *testing.T) {
 		ce := config.Env{
-			Kind:            config.EnvKindBackendGo,
-			Port:            8080,
-			BaseURL:         "http://localhost:8080",
-			BinaryPath:      "bin/tickraft",
-			BuildTarget:     "./cmd/tickraft",
-			ConfigPath:      "configs/config.yaml",
-			ConfigFlag:      "--config",
-			AddrFlag:        "--addr",
-			HealthPath:      "/api/v1/health",
-			HealthyTimeout:  "30s",
-			Args:            []string{"--verbose"},
-			Env:             []string{"FOO=bar"},
-			Command:         "pnpm dev",
-			Cwd:             "/tmp/app",
-			ReadyURL:        "http://localhost:5173",
-			ReadyText:       "ready",
+			Kind:           config.EnvKindBackendGo,
+			Port:           8080,
+			BaseURL:        "http://localhost:8080",
+			BinaryPath:     "bin/tickraft",
+			BuildTarget:    "./cmd/tickraft",
+			ConfigPath:     "configs/config.yaml",
+			ConfigFlag:     "--config",
+			AddrFlag:       "--addr",
+			HealthPath:     "/api/v1/health",
+			HealthyTimeout: "30s",
+			Args:           []string{"--verbose"},
+			Env:            []string{"FOO=bar"},
+			Command:        "pnpm dev",
+			Cwd:            "/tmp/app",
+			ReadyURL:       "http://localhost:5173",
+			ReadyText:      "ready",
 		}
 		got := NewSpec("tickraft-backend", ce)
 
@@ -835,5 +835,72 @@ func TestFreePort_Concurrent(t *testing.T) {
 		if ports[i] <= 0 || ports[i] > 65535 {
 			t.Errorf("goroutine %d port = %d, want a valid TCP port", i, ports[i])
 		}
+	}
+}
+
+// =====================================================================
+// splitCommand
+// =====================================================================
+
+// TestSplitCommand verifies command-string parsing including double-quoted
+// segments containing whitespace and backslash-escaped characters.
+func TestSplitCommand(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want []string
+	}{
+		{"simple", "npm run dev", []string{"npm", "run", "dev"}},
+		{"quoted segment with space", `npm "run dev" --port 5173`, []string{"npm", "run dev", "--port", "5173"}},
+		{"sh -c quoted", `sh -c "echo hi"`, []string{"sh", "-c", "echo hi"}},
+		{"empty", "", nil},
+		{"single token", "single", []string{"single"}},
+		{"whitespace only", "  ", nil},
+		{"escaped quote inside", `prog "a\"b"`, []string{"prog", `a"b`}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := splitCommand(c.in)
+			if len(got) == 0 && len(c.want) == 0 {
+				return
+			}
+			if len(got) != len(c.want) {
+				t.Errorf("splitCommand(%q) = %v, want %v", c.in, got, c.want)
+				return
+			}
+			for i := range got {
+				if got[i] != c.want[i] {
+					t.Errorf("splitCommand(%q)[%d] = %q, want %q", c.in, i, got[i], c.want[i])
+				}
+			}
+		})
+	}
+}
+
+// =====================================================================
+// processEnv: waitForReady configurable timeout
+// =====================================================================
+
+// TestProcessEnv_ReadyTimeoutConfigurable verifies that waitForReady honors
+// spec.HealthyTimeout instead of the hardcoded 60s default. An unreachable
+// ReadyURL (connection refused on port 1) keeps polling; with HealthyTimeout
+// set to 200ms the function must return well within 1 second.
+func TestProcessEnv_ReadyTimeoutConfigurable(t *testing.T) {
+	f := newProcessEnv(EnvSpec{
+		Kind:           config.EnvKindCustom,
+		Name:           "timeout",
+		ReadyURL:       "http://127.0.0.1:1/ready",
+		HealthyTimeout: 200 * time.Millisecond,
+	}, "")
+
+	start := time.Now()
+	_, err := f.waitForReady(context.Background())
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected error for unreachable ready URL, got nil")
+	}
+	if elapsed >= time.Second {
+		t.Errorf("waitForReady took %s, want < 1s (HealthyTimeout=200ms should be respected, not the 60s default)", elapsed)
 	}
 }

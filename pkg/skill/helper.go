@@ -106,3 +106,49 @@ func GetBool(raw map[string]any, key string, fallback bool) bool {
 	}
 	return fallback
 }
+
+// ToStringSlice converts an []any to []string, skipping non-string entries.
+// Returns nil when v is nil or not a slice. Useful for skill configs that
+// receive YAML lists as []any.
+func ToStringSlice(v any) []string {
+	if v == nil {
+		return nil
+	}
+	arr, ok := v.([]any)
+	if !ok {
+		return nil
+	}
+	out := make([]string, 0, len(arr))
+	for _, item := range arr {
+		if s, ok := item.(string); ok {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// ToStringMap converts a map[string]any to a map[string]string, formatting
+// each value with fmt.Sprintf("%v"). Returns nil when v is nil or not a map.
+func ToStringMap(v any) map[string]string {
+	if v == nil {
+		return nil
+	}
+	m, ok := v.(map[string]any)
+	if !ok {
+		return nil
+	}
+	out := make(map[string]string, len(m))
+	for k, val := range m {
+		out[k] = fmt.Sprintf("%v", val)
+	}
+	return out
+}
+
+// ErrorString safely converts an error to its string representation,
+// returning an empty string for a nil error.
+func ErrorString(err error) string {
+	if err == nil {
+		return ""
+	}
+	return err.Error()
+}

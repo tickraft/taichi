@@ -16,6 +16,8 @@ Taichi provides four extension points, ordered by usage frequency:
 
 > **Built-in skills**: taichi ships five built-in skills — `api` / `grpc` / `ui` / `static` / `regression`. The `grpc` skill (`pkg/skill/grpc`, `kind: grpc`) covers config-driven smoke checks only (health / connectivity / reflection); it intentionally avoids dynamic protobuf message construction. For full unary/streaming RPC testing with compiled protobuf stubs, implement a third-party plugin skill (`kind: plugin`) with a small Go helper that imports the generated client package.
 
+> **Plugin process environment**: plugin processes inherit all of the taichi parent process's environment variables (`os.Environ()`) plus any `env` fields configured for the plugin. Be mindful of sensitive variable isolation.
+
 ## 2. Custom Skill
 
 ### 2.1 Implement the TestSkill Interface

@@ -16,7 +16,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -28,6 +27,12 @@ import (
 	"github.com/tickraft/taichi/pkg/config"
 	"github.com/tickraft/taichi/pkg/framework"
 	"github.com/tickraft/taichi/pkg/i18n"
+)
+
+const (
+	// defaultFrontendReadyTimeout is the total timeout to wait for a
+	// frontend/custom env to become ready when HealthyTimeout is not set.
+	defaultFrontendReadyTimeout = 60 * time.Second
 )
 
 // EnvSpec is the runtime config of an environment, isomorphic to config.Env but
@@ -45,43 +50,43 @@ type EnvSpec struct {
 	BaseURL string
 
 	// Backend fields (used when Kind=backend.*).
-	BinaryPath    string
-	BuildTarget   string
-	ConfigPath    string
-	ConfigFlag    string
-	AddrFlag      string
-	HealthPath    string
+	BinaryPath     string
+	BuildTarget    string
+	ConfigPath     string
+	ConfigFlag     string
+	AddrFlag       string
+	HealthPath     string
 	HealthyTimeout time.Duration
-	Args          []string
-	Env           []string
+	Args           []string
+	Env            []string
 
 	// Frontend fields (used when Kind=frontend.*).
-	Command    string
-	Cwd        string
-	ReadyURL   string
-	ReadyText  string
+	Command   string
+	Cwd       string
+	ReadyURL  string
+	ReadyText string
 }
 
 // NewSpec builds an EnvSpec from a config.Env.
 func NewSpec(name string, e config.Env) EnvSpec {
 	return EnvSpec{
-		Name:            name,
-		Kind:            e.Kind,
-		Port:            e.Port,
-		BaseURL:         e.BaseURL,
-		BinaryPath:      e.BinaryPath,
-		BuildTarget:     e.BuildTarget,
-		ConfigPath:      e.ConfigPath,
-		ConfigFlag:      e.ConfigFlag,
-		AddrFlag:        e.AddrFlag,
-		HealthPath:      e.HealthPath,
-		HealthyTimeout:  e.HealthyTimeoutDuration(),
-		Args:            e.Args,
-		Env:             e.Env,
-		Command:         e.Command,
-		Cwd:             e.Cwd,
-		ReadyURL:        e.ReadyURL,
-		ReadyText:       e.ReadyText,
+		Name:           name,
+		Kind:           e.Kind,
+		Port:           e.Port,
+		BaseURL:        e.BaseURL,
+		BinaryPath:     e.BinaryPath,
+		BuildTarget:    e.BuildTarget,
+		ConfigPath:     e.ConfigPath,
+		ConfigFlag:     e.ConfigFlag,
+		AddrFlag:       e.AddrFlag,
+		HealthPath:     e.HealthPath,
+		HealthyTimeout: e.HealthyTimeoutDuration(),
+		Args:           e.Args,
+		Env:            e.Env,
+		Command:        e.Command,
+		Cwd:            e.Cwd,
+		ReadyURL:       e.ReadyURL,
+		ReadyText:      e.ReadyText,
 	}
 }
 
@@ -125,16 +130,16 @@ type backend struct {
 
 func newBackend(spec EnvSpec, projectRoot string) *backend {
 	cfg := framework.ServiceConfig{
-		BinaryPath:          spec.BinaryPath,
-		BuildTarget:         spec.BuildTarget,
-		ConfigPath:          spec.ConfigPath,
-		ConfigFlag:          spec.ConfigFlag,
-		AddrFlag:            spec.AddrFlag,
-		Port:                spec.Port,
-		HealthPath:          spec.HealthPath,
-		HealthyTimeout:      spec.HealthyTimeout,
-		Args:                spec.Args,
-		Env:                 spec.Env,
+		BinaryPath:     spec.BinaryPath,
+		BuildTarget:    spec.BuildTarget,
+		ConfigPath:     spec.ConfigPath,
+		ConfigFlag:     spec.ConfigFlag,
+		AddrFlag:       spec.AddrFlag,
+		Port:           spec.Port,
+		HealthPath:     spec.HealthPath,
+		HealthyTimeout: spec.HealthyTimeout,
+		Args:           spec.Args,
+		Env:            spec.Env,
 	}
 	lc := framework.NewServiceLifecycle(cfg)
 	if projectRoot != "" {
@@ -212,7 +217,10 @@ func (f *processEnv) Start(ctx context.Context) (string, error) {
 	f.logPath = logPath
 	f.logFile = logFile
 
-	parts := strings.Fields(f.spec.Command)
+	parts := splitCommand(f.spec.Command)
+	if len(parts) == 0 {
+		return "", errors.New(i18n.T("env.frontend.cmd_empty", f.spec.Name))
+	}
 	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
@@ -231,14 +239,14 @@ func (f *processEnv) Start(ctx context.Context) (string, error) {
 		cmd.Env = append(os.Environ(), f.spec.Env...)
 	}
 	if err := cmd.Start(); err != nil {
-		_ = logFile.Close()
+		_ = logFile.Close() // best-effort: release the log file on start failure; the start error is the primary result.
 		return "", fmt.Errorf("%s: %w", i18n.T("env.frontend.start_failed", f.spec.Name), err)
 	}
 	f.cmd = cmd
 
 	baseURL, err := f.waitForReady(ctx)
 	if err != nil {
-		_ = f.stopLocked()
+		_ = f.stopLocked() // best-effort: tear down the launched process on readiness failure; the readiness error is propagated.
 		return "", err
 	}
 	f.baseURL = baseURL
@@ -252,7 +260,11 @@ func (f *processEnv) waitForReady(ctx context.Context) (string, error) {
 	baseURL := f.spec.ReadyURL
 	client := &http.Client{Timeout: 2 * time.Second}
 	deadline := ctx.Done()
-	timeout := time.After(60 * time.Second)
+	readyTimeout := f.spec.HealthyTimeout
+	if readyTimeout <= 0 {
+		readyTimeout = defaultFrontendReadyTimeout
+	}
+	timeout := time.After(readyTimeout)
 	for {
 		select {
 		case <-deadline:
@@ -266,11 +278,11 @@ func (f *processEnv) waitForReady(ctx context.Context) (string, error) {
 			body := make([]byte, 0)
 			if f.spec.ReadyText != "" {
 				buf := make([]byte, 4096)
-				n, _ := resp.Body.Read(buf)
+				n, _ := resp.Body.Read(buf) // best-effort: a short read just means the body is smaller than the buffer; the partial content is still usable for ReadyText matching.
 				body = buf[:n]
-				_ = resp.Body.Close()
+				_ = resp.Body.Close() // best-effort: close the response body after reading the readiness snippet; read errors do not affect the readiness verdict.
 			} else {
-				_ = resp.Body.Close()
+				_ = resp.Body.Close() // best-effort: close the response body when ReadyText is not configured; nothing more to read.
 			}
 			if resp.StatusCode >= 200 && resp.StatusCode < 500 {
 				if f.spec.ReadyText == "" || strings.Contains(string(body), f.spec.ReadyText) {
@@ -292,7 +304,7 @@ func (f *processEnv) stopLocked() error {
 	if f.cmd == nil || f.cmd.Process == nil {
 		return nil
 	}
-	_ = f.cmd.Process.Signal(os.Interrupt)
+	_ = f.cmd.Process.Signal(os.Interrupt) // best-effort: ask the process to exit gracefully; escalation to Kill follows if it ignores Interrupt.
 	done := make(chan error, 1)
 	go func() {
 		done <- f.cmd.Wait()
@@ -300,11 +312,11 @@ func (f *processEnv) stopLocked() error {
 	select {
 	case <-done:
 	case <-time.After(10 * time.Second):
-		_ = f.cmd.Process.Kill()
+		_ = f.cmd.Process.Kill() // best-effort: force-kill the process after the 10s grace period; the result is observed via cmd.Wait below.
 		<-done
 	}
 	if f.logFile != nil {
-		_ = f.logFile.Close()
+		_ = f.logFile.Close() // best-effort: release the log file handle during shutdown; nothing more can be written after this point.
 		f.logFile = nil
 	}
 	f.cmd = nil
@@ -338,6 +350,45 @@ func (f *processEnv) openLog() (string, *os.File, error) {
 		return "", nil, fmt.Errorf("create log file: %w", err)
 	}
 	return path, file, nil
+}
+
+// splitCommand splits a command string into program and arguments.
+// It supports double-quoted segments containing whitespace and
+// backslash-escaped characters (\", \\). Single quotes are treated
+// literally (not as quoting characters) to keep the grammar minimal.
+// Returns nil if s is empty or contains no tokens.
+func splitCommand(s string) []string {
+	var args []string
+	var b strings.Builder
+	inQuote := false
+	escaped := false
+	hasToken := false
+	for _, r := range s {
+		switch {
+		case escaped:
+			b.WriteRune(r)
+			escaped = false
+		case r == '\\':
+			escaped = true
+			hasToken = true
+		case r == '"':
+			inQuote = !inQuote
+			hasToken = true
+		case (r == ' ' || r == '\t') && !inQuote:
+			if hasToken {
+				args = append(args, b.String())
+				b.Reset()
+				hasToken = false
+			}
+		default:
+			b.WriteRune(r)
+			hasToken = true
+		}
+	}
+	if hasToken {
+		args = append(args, b.String())
+	}
+	return args
 }
 
 // Manager manages the start/stop of the env for a single project.
@@ -384,21 +435,8 @@ func (m *Manager) Spec() EnvSpec {
 }
 
 // FreePort returns a free TCP port (exposed for use by config generators).
+// It delegates to framework.FreePort so the port-allocation logic is
+// defined in a single place rather than duplicated across packages.
 func FreePort() (int, error) {
-	return findFreePort()
-}
-
-// findFreePort has the same implementation as framework.findFreePort but is
-// duplicated here to avoid a circular dependency.
-func findFreePort() (int, error) {
-	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
-	if err != nil {
-		return 0, err
-	}
-	l, err := net.ListenTCP("tcp", addr)
-	if err != nil {
-		return 0, err
-	}
-	defer l.Close()
-	return l.Addr().(*net.TCPAddr).Port, nil
+	return framework.FreePort()
 }

@@ -86,18 +86,18 @@ func buildTestServer(t *testing.T) string {
 func newLifecycleConfig(t *testing.T, binary string) ServiceConfig {
 	t.Helper()
 	return ServiceConfig{
-		BinaryPath:      binary,
-		AddrFlag:        "--addr",
-		HealthPath:      "/health",
-		ReportsDir:      filepath.Join(t.TempDir(), "reports"),
-		HealthyTimeout:  10 * time.Second,
+		BinaryPath:     binary,
+		AddrFlag:       "--addr",
+		HealthPath:     "/health",
+		ReportsDir:     filepath.Join(t.TempDir(), "reports"),
+		HealthyTimeout: 10 * time.Second,
 	}
 }
 
 func TestFindFreePort(t *testing.T) {
-	port, err := findFreePort()
+	port, err := FreePort()
 	if err != nil {
-		t.Fatalf("findFreePort failed: %v", err)
+		t.Fatalf("FreePort failed: %v", err)
 	}
 	if port <= 0 {
 		t.Fatalf("expected positive port, got %d", port)
@@ -113,13 +113,13 @@ func TestFindFreePort(t *testing.T) {
 
 func TestFindFreePortReturnsDistinct(t *testing.T) {
 	// Two consecutive calls should generally return different ports.
-	p1, err := findFreePort()
+	p1, err := FreePort()
 	if err != nil {
-		t.Fatalf("first findFreePort failed: %v", err)
+		t.Fatalf("first FreePort failed: %v", err)
 	}
-	p2, err := findFreePort()
+	p2, err := FreePort()
 	if err != nil {
-		t.Fatalf("second findFreePort failed: %v", err)
+		t.Fatalf("second FreePort failed: %v", err)
 	}
 	if p1 == 0 || p2 == 0 {
 		t.Fatalf("expected non-zero ports, got %d and %d", p1, p2)
@@ -128,16 +128,16 @@ func TestFindFreePortReturnsDistinct(t *testing.T) {
 
 func TestNewServiceLifecycle(t *testing.T) {
 	cfg := ServiceConfig{
-		BinaryPath:   "/usr/bin/true",
-		BuildTarget:  "./cmd/foo",
-		ConfigPath:   "configs/test.yaml",
-		ConfigFlag:   "--config",
-		AddrFlag:     "--addr",
-		Port:         8080,
-		HealthPath:   "/health",
-		ReportsDir:   "reports",
-		Args:         []string{"--verbose"},
-		Env:          []string{"FOO=bar"},
+		BinaryPath:  "/usr/bin/true",
+		BuildTarget: "./cmd/foo",
+		ConfigPath:  "configs/test.yaml",
+		ConfigFlag:  "--config",
+		AddrFlag:    "--addr",
+		Port:        8080,
+		HealthPath:  "/health",
+		ReportsDir:  "reports",
+		Args:        []string{"--verbose"},
+		Env:         []string{"FOO=bar"},
 	}
 	s := NewServiceLifecycle(cfg)
 	got := s.Config()

@@ -39,7 +39,7 @@ projects:
 | `EnvKindBackendNode` | `backend.node` | Node 后端：启动 node 二进制 |
 | `EnvKindFrontendVite` | `frontend.vite` | Vite 前端：启动 dev server |
 | `EnvKindFrontendNuxt` | `frontend.nuxt` | Nuxt 前端：启动 dev server |
-| `EnvKindCustom` | `custom` | 自定义（需用户实现 Environment 接口） |
+| `EnvKindCustom` | `custom` | 自定义：复用 process 实现，通过 `command` 启动任意语言服务进程并以 `ready_url` 轮询就绪 |
 
 > **重要约束**：env 名（`envs` 的 map 键）**不可含点号（`.`）**，否则会被 viper 当作嵌套键分隔符。使用连字符（`-`）分隔，如 `tickraft-backend`。
 
@@ -70,15 +70,16 @@ envs:
 envs:
   vite-local:
     kind: frontend.vite
-    command: pnpm dev             # 启动命令（空格分隔为程序+参数）
+    command: pnpm dev             # 启动命令（拆分为程序+参数；保留双引号包裹的含空格段，如 `npm "run dev" --port 5173`）
     cwd: .                        # 工作目录（相对项目根）
     ready_url: http://localhost:5173  # 轮询此 URL 直到 2xx/4xx
     ready_text: ""                # 非空时还要求响应体包含此子串
+    healthy_timeout: 60s          # 等待就绪超时（默认 60s）；同样适用于 custom 环境
     port: 5173
     base_url: ""                  # 非空时跳过启动
 ```
 
-前端环境启动子进程，捕获 stdout/stderr 到日志文件，轮询 `ready_url` 直到返回 2xx/4xx 状态码（且响应体包含 `ready_text`，若配置）。最长等待 60 秒。
+前端环境启动子进程，捕获 stdout/stderr 到日志文件，轮询 `ready_url` 直到返回 2xx/4xx 状态码（且响应体包含 `ready_text`，若配置）。最长等待时长由 `healthy_timeout` 控制（默认 60s）。
 
 ### 3.4 外部托管环境
 

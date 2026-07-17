@@ -169,11 +169,11 @@ func TestConfigureEmptyCommand(t *testing.T) {
 func TestConfigureValid(t *testing.T) {
 	s := New("myplugin")
 	raw := map[string]any{
-		"command":  "./script",
-		"args":     []any{"-v"},
-		"env":      []any{"K=V"},
-		"workdir":  ".",
-		"timeout":  "10s",
+		"command":   "./script",
+		"args":      []any{"-v"},
+		"env":       []any{"K=V"},
+		"workdir":   ".",
+		"timeout":   "10s",
 		"endpoints": []any{"/api/v1/custom"},
 	}
 	if err := s.Configure(skill.SkillConfig{Raw: raw}); err != nil {

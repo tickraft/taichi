@@ -7,7 +7,7 @@ COVERAGE := 80
 
 GO ?= go
 
-.PHONY: all build test test-race test-cover test-integration lint fmt clean install run help
+.PHONY: all build test test-race test-cover test-integration lint fmt-check fmt clean install run help
 
 all: build test
 
@@ -32,9 +32,19 @@ test-cover:
 test-integration:
 	$(GO) test -tags=integration ./...
 
-## lint: Run golangci-lint
-lint:
+## lint: Run golangci-lint (fails on gofmt issues too)
+lint: fmt-check
 	golangci-lint run --timeout 5m ./...
+
+## fmt-check: Verify all Go files are gofmt-compliant (exit 1 if not)
+fmt-check:
+	@out=$$(gofmt -l $(shell find . -name '*.go' -not -path './vendor/*')); \
+	if [ -n "$$out" ]; then \
+		echo "gofmt issues found in the following files:"; \
+		echo "$$out" | sed 's/^/  /'; \
+		echo "Run 'make fmt' to fix."; \
+		exit 1; \
+	fi
 
 ## fmt: Format code
 fmt:

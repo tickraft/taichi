@@ -10,6 +10,7 @@ import (
 	"github.com/tickraft/taichi/pkg/agent"
 	"github.com/tickraft/taichi/pkg/i18n"
 	"github.com/tickraft/taichi/pkg/orchestrator"
+	"github.com/tickraft/taichi/pkg/skill/builtin"
 )
 
 // copilotFlags holds the options of the copilot subcommand.
@@ -103,7 +104,7 @@ func runCopilot(cmd *cobra.Command, gf *globalFlags, af *copilotFlags) error {
 	}
 
 	o := orchestrator.New()
-	if err := o.RegisterBuiltinSkills(builtinSkills()); err != nil {
+	if err := o.RegisterBuiltinSkills(builtin.Skills()); err != nil {
 		return fmt.Errorf("%s: %w", i18n.T("cli.copilot.error.register"), err)
 	}
 

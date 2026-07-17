@@ -116,11 +116,11 @@ func Generate(reporter *framework.TestReporter, registry *Registry, formats []Fo
 				return fmt.Errorf("write junit: %w", err)
 			}
 		case FormatSummary:
-		if path == "" {
-			// Default output to stdout.
-			reporter.PrintSummary(os.Stdout)
-			continue
-		}
+			if path == "" {
+				// Default output to stdout.
+				reporter.PrintSummary(os.Stdout)
+				continue
+			}
 			file, err := os.Create(path)
 			if err != nil {
 				return fmt.Errorf("create summary file: %w", err)

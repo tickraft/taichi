@@ -87,7 +87,7 @@ func (s *Skill) Configure(cfg skill.SkillConfig) error {
 					Type:             CaseType(skill.GetString(m, "type", string(CaseHealth))),
 					Target:           skill.GetString(m, "target", ""),
 					ExpectedStatus:   skill.GetString(m, "expected_status", ""),
-					ExpectedServices: toStringSlice(m["expected_services"]),
+					ExpectedServices: skill.ToStringSlice(m["expected_services"]),
 					MaxLatency:       skill.GetString(m, "max_latency", ""),
 				}
 				if c.Name == "" {
@@ -131,22 +131,4 @@ func (s *Skill) Run(ctx *skill.SkillContext) skill.SkillResult {
 // Teardown implements skill.TestSkill.
 func (s *Skill) Teardown(ctx *skill.SkillContext) error {
 	return nil
-}
-
-// toStringSlice converts an []any to []string, skipping non-string entries.
-func toStringSlice(v any) []string {
-	if v == nil {
-		return nil
-	}
-	arr, ok := v.([]any)
-	if !ok {
-		return nil
-	}
-	out := make([]string, 0, len(arr))
-	for _, item := range arr {
-		if s, ok := item.(string); ok {
-			out = append(out, s)
-		}
-	}
-	return out
 }

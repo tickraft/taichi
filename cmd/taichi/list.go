@@ -7,6 +7,7 @@ import (
 	"github.com/tickraft/taichi/pkg/config"
 	"github.com/tickraft/taichi/pkg/i18n"
 	"github.com/tickraft/taichi/pkg/registry"
+	"github.com/tickraft/taichi/pkg/skill/builtin"
 )
 
 // newListCmd constructs the list subcommand.
@@ -89,7 +90,7 @@ func listConfig(cmd *cobra.Command, gf *globalFlags) error {
 
 	// 4. Registered builtin skills.
 	reg := registry.NewRegistry()
-	for _, s := range builtinSkills() {
+	for _, s := range builtin.Skills() {
 		_ = reg.Register(s, true)
 	}
 	registered := reg.List()

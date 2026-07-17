@@ -63,7 +63,7 @@ taichi 是一个**通用的自动化测试编排框架**。核心设计目标：
 | `types.go` | TestCase / TestResult / TestSuite / AssertResult 类型定义 |
 | `assert.go` | AssertionEngine：状态码、JSON 字段、JSONPath、HTML 包含、响应时延断言 |
 | `reporter.go` | TestReporter：结果收集、JSON / JUnit XML / 摘要输出、Snapshot |
-| `lifecycle.go` | ServiceLifecycle：按需构建二进制、空闲端口启动、健康检查、停止/重启 |
+| `lifecycle.go` | ServiceLifecycle：按需构建二进制、空闲端口启动、健康检查、停止/重启。导出 `FreePort()` 作为空闲端口的唯一实现（`pkg/env` 复用） |
 
 **关键设计**：`ServiceLifecycle` 通过 `ServiceConfig` 全配置化，不再硬编码项目路径，可服务任意 Go 二进制。
 
@@ -163,4 +163,4 @@ report → framework
 autofix → (无外部依赖，ServiceRestarter 为接口)
 ```
 
-**循环依赖规避**：`pkg/orchestrator` 不直接 import `skills/*`，而是通过 `RegisterBuiltinSkills([]skill.TestSkill)` 由 `cmd/taichi` 传入已构造的技能实例。
+**循环依赖规避**：`pkg/orchestrator` 不直接 import `skills/*`，而是通过 `RegisterBuiltinSkills([]skill.TestSkill)` 由 `cmd/taichi` 传入已构造的技能实例。内置技能实例的权威列表为 `pkg/skill/builtin` 中的 `builtin.BuiltinSkills()` —— 是 `cmd/taichi`（run/list/copilot）与 `pkg/mcp` 共用的唯一来源，避免列表漂移。

@@ -250,9 +250,9 @@ func TestRunSkipOn404(t *testing.T) {
 	configureAndSetup(t, s, map[string]any{
 		"cases": []any{
 			map[string]any{
-				"name":         "health",
-				"path":         "/health",
-				"skip_on_404":  true,
+				"name":        "health",
+				"path":        "/health",
+				"skip_on_404": true,
 			},
 		},
 	})

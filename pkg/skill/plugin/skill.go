@@ -7,28 +7,28 @@
 //
 // Protocol contract:
 //
-//   stdin  → PluginInput  (JSON)
-//   stdout ← PluginOutput (JSON)
-//   stderr ← free-form logs (taichi forwards them to its own logger)
-//   exit 0 = plugin executed normally (pass/fail is expressed via stdout JSON)
-//   exit ≠ 0 = plugin-level fatal error
+//	stdin  → PluginInput  (JSON)
+//	stdout ← PluginOutput (JSON)
+//	stderr ← free-form logs (taichi forwards them to its own logger)
+//	exit 0 = plugin executed normally (pass/fail is expressed via stdout JSON)
+//	exit ≠ 0 = plugin-level fatal error
 //
 // Configuration example:
 //
-//   skills:
-//     - name: my-check
-//       kind: plugin
-//       enabled: true
-//       priority: 20
-//       raw:
-//         command: ./my-plugin
-//         args: ["--verbose"]
-//         env: ["API_KEY=xxx"]
-//         workdir: .
-//         timeout: 30s
-//         # Any custom fields below are passed through to the plugin's input.config
-//         endpoints:
-//           - /api/v1/custom
+//	skills:
+//	  - name: my-check
+//	    kind: plugin
+//	    enabled: true
+//	    priority: 20
+//	    raw:
+//	      command: ./my-plugin
+//	      args: ["--verbose"]
+//	      env: ["API_KEY=xxx"]
+//	      workdir: .
+//	      timeout: 30s
+//	      # Any custom fields below are passed through to the plugin's input.config
+//	      endpoints:
+//	        - /api/v1/custom
 package plugin
 
 import (

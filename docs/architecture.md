@@ -64,7 +64,7 @@ Provides the base capabilities for test orchestration, with no dependency on bus
 | `types.go` | TestCase / TestResult / TestSuite / AssertResult type definitions |
 | `assert.go` | AssertionEngine: status code, JSON field, JSONPath, HTML contains, response latency assertions |
 | `reporter.go` | TestReporter: result collection, JSON / JUnit XML / summary output, Snapshot |
-| `lifecycle.go` | ServiceLifecycle: on-demand binary build, free-port startup, health check, stop/restart |
+| `lifecycle.go` | ServiceLifecycle: on-demand binary build, free-port startup, health check, stop/restart. Exports `FreePort()` as the single free-port implementation (reused by `pkg/env`) |
 
 **Key design**: `ServiceLifecycle` is fully configured via `ServiceConfig`, with no hardcoded project paths, and can serve any Go binary.
 
@@ -164,4 +164,4 @@ report → framework
 autofix → (no external deps, ServiceRestarter is an interface)
 ```
 
-**Circular dependency avoidance**: `pkg/orchestrator` does not directly import `skills/*`; instead, `RegisterBuiltinSkills([]skill.TestSkill)` is called by `cmd/taichi` to pass in constructed skill instances.
+**Circular dependency avoidance**: `pkg/orchestrator` does not directly import `skills/*`; instead, `RegisterBuiltinSkills([]skill.TestSkill)` is called by `cmd/taichi` to pass in constructed skill instances. The canonical list of built-in skill instances is `builtin.BuiltinSkills()` in `pkg/skill/builtin` — the single source of truth shared by `cmd/taichi` (run/list/copilot) and `pkg/mcp` to avoid divergence.

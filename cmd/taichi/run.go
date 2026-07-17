@@ -13,11 +13,7 @@ import (
 	"github.com/tickraft/taichi/pkg/i18n"
 	"github.com/tickraft/taichi/pkg/orchestrator"
 	"github.com/tickraft/taichi/pkg/skill"
-	api "github.com/tickraft/taichi/pkg/skill/api"
-	"github.com/tickraft/taichi/pkg/skill/grpc"
-	"github.com/tickraft/taichi/pkg/skill/regression"
-	"github.com/tickraft/taichi/pkg/skill/static"
-	"github.com/tickraft/taichi/pkg/skill/ui"
+	"github.com/tickraft/taichi/pkg/skill/builtin"
 )
 
 // runFlags holds the local options of the run subcommand.
@@ -79,7 +75,7 @@ func runOrchestrator(cmd *cobra.Command, gf *globalFlags, rf *runFlags) error {
 	}
 
 	o := orchestrator.New()
-	if err := o.RegisterBuiltinSkills(builtinSkills()); err != nil {
+	if err := o.RegisterBuiltinSkills(builtin.Skills()); err != nil {
 		return fmt.Errorf("%s: %w", i18n.T("cli.run.error.register_builtin"), err)
 	}
 
@@ -100,18 +96,6 @@ func runOrchestrator(cmd *cobra.Command, gf *globalFlags, rf *runFlags) error {
 		return errors.New(i18n.T("cli.run.output.failed_count", result.Summary.Failed))
 	}
 	return nil
-}
-
-// builtinSkills returns the taichi built-in skill instances.
-// Custom skills can be registered by appending to this list (or by importing and constructing via code).
-func builtinSkills() []skill.TestSkill {
-	return []skill.TestSkill{
-		&api.Skill{},
-		&grpc.Skill{},
-		&ui.Skill{},
-		&static.Skill{},
-		&regression.Skill{},
-	}
 }
 
 // printRunResult writes the run summary to stdout.

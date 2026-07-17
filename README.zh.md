@@ -74,6 +74,9 @@ make build
 
 # 6. 覆盖报告输出目录
 ./bin/taichi run --config configs/taichi.yaml --reports-dir /tmp/taichi-reports
+
+# 7. 校验配置文件（不执行测试）
+./bin/taichi validate -c configs/taichi.yaml
 ```
 
 ## 最小配置示例

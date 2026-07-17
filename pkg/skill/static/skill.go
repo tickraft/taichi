@@ -14,11 +14,11 @@ import (
 
 // Skill is the static-asset test skill.
 type Skill struct {
-	cfg       skill.SkillConfig
-	pages     []string
-	assets    []string
-	timeout   time.Duration
-	client    *http.Client
+	cfg     skill.SkillConfig
+	pages   []string
+	assets  []string
+	timeout time.Duration
+	client  *http.Client
 }
 
 // Name implements skill.TestSkill.
@@ -34,8 +34,8 @@ func (s *Skill) Configure(cfg skill.SkillConfig) error {
 	if raw == nil {
 		return nil
 	}
-	s.pages = toStringSlice(raw["pages"])
-	s.assets = toStringSlice(raw["assets"])
+	s.pages = skill.ToStringSlice(raw["pages"])
+	s.assets = skill.ToStringSlice(raw["assets"])
 	s.timeout = skill.GetDuration(raw, "timeout", skill.DefaultHTTPTimeout)
 	return nil
 }
@@ -110,21 +110,3 @@ func (s *Skill) Run(ctx *skill.SkillContext) skill.SkillResult {
 
 // Teardown implements skill.TestSkill.
 func (s *Skill) Teardown(ctx *skill.SkillContext) error { return nil }
-
-// toStringSlice converts an any to []string.
-func toStringSlice(v any) []string {
-	if v == nil {
-		return nil
-	}
-	arr, ok := v.([]any)
-	if !ok {
-		return nil
-	}
-	out := make([]string, 0, len(arr))
-	for _, item := range arr {
-		if s, ok := item.(string); ok {
-			out = append(out, s)
-		}
-	}
-	return out
-}

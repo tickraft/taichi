@@ -16,6 +16,7 @@ import (
 	"github.com/tickraft/taichi/pkg/framework"
 	"github.com/tickraft/taichi/pkg/orchestrator"
 	"github.com/tickraft/taichi/pkg/skill"
+	"github.com/tickraft/taichi/pkg/skill/builtin"
 )
 
 // makeRequest builds a JSON-RPC 2.0 request string with the given id, method and
@@ -623,17 +624,18 @@ func TestToolRegression_Success(t *testing.T) {
 	}
 }
 
-// TestBuiltinSkills verifies that builtinSkills returns the four expected
-// skill instances.
+// TestBuiltinSkills verifies that BuiltinSkills returns the five expected
+// skill instances (api, grpc, ui, static, regression).
 func TestBuiltinSkills(t *testing.T) {
-	skills := builtinSkills()
-	if len(skills) != 4 {
-		t.Fatalf("builtinSkills count = %d, want 4", len(skills))
+	skills := builtin.Skills()
+	if len(skills) != 5 {
+		t.Fatalf("BuiltinSkills count = %d, want 5", len(skills))
 	}
 	want := map[string]bool{
-		"api":       false,
-		"ui":        false,
-		"static":    false,
+		"api":        false,
+		"grpc":       false,
+		"ui":         false,
+		"static":     false,
 		"regression": false,
 	}
 	for _, sk := range skills {
@@ -798,11 +800,11 @@ func TestErrorResponse(t *testing.T) {
 // values, missing keys, type mismatches, and defaults.
 func TestGetStringArg(t *testing.T) {
 	cases := []struct {
-		name    string
-		args    map[string]any
-		key     string
-		def     string
-		want    string
+		name string
+		args map[string]any
+		key  string
+		def  string
+		want string
 	}{
 		{"present string", map[string]any{"k": "v"}, "k", "def", "v"},
 		{"missing key returns default", map[string]any{}, "k", "def", "def"},
@@ -879,15 +881,15 @@ func TestToJSONString(t *testing.T) {
 	})
 }
 
-// TestErrorString verifies errorString returns "" for nil and the error message
+// TestErrorString verifies skill.ErrorString returns "" for nil and the error message
 // for a non-nil error.
 func TestErrorString(t *testing.T) {
-	if got := errorString(nil); got != "" {
-		t.Errorf("errorString(nil) = %q, want empty", got)
+	if got := skill.ErrorString(nil); got != "" {
+		t.Errorf("skill.ErrorString(nil) = %q, want empty", got)
 	}
 	err := errors.New("something failed")
-	if got := errorString(err); got != "something failed" {
-		t.Errorf("errorString(err) = %q, want something failed", got)
+	if got := skill.ErrorString(err); got != "something failed" {
+		t.Errorf("skill.ErrorString(err) = %q, want something failed", got)
 	}
 }
 

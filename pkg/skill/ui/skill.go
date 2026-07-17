@@ -14,17 +14,17 @@ import (
 
 // Skill is the UI test skill.
 type Skill struct {
-	cfg        skill.SkillConfig
-	pages      []pageCase
-	timeout    time.Duration
-	client     *http.Client
+	cfg     skill.SkillConfig
+	pages   []pageCase
+	timeout time.Duration
+	client  *http.Client
 }
 
 // pageCase is the configuration of a single page case.
 type pageCase struct {
-	Path        string   `mapstructure:"path"`
-	Contains    []string `mapstructure:"contains"`
-	MaxLatency  string   `mapstructure:"max_latency"`
+	Path       string   `mapstructure:"path"`
+	Contains   []string `mapstructure:"contains"`
+	MaxLatency string   `mapstructure:"max_latency"`
 }
 
 // Name implements skill.TestSkill.
@@ -54,7 +54,7 @@ func (s *Skill) Configure(cfg skill.SkillConfig) error {
 				}
 				c := pageCase{
 					Path:       path,
-					Contains:   toStringSlice(m["contains"]),
+					Contains:   skill.ToStringSlice(m["contains"]),
 					MaxLatency: skill.GetString(m, "max_latency", ""),
 				}
 				s.pages = append(s.pages, c)
@@ -117,21 +117,3 @@ func (s *Skill) Run(ctx *skill.SkillContext) skill.SkillResult {
 
 // Teardown implements skill.TestSkill.
 func (s *Skill) Teardown(ctx *skill.SkillContext) error { return nil }
-
-// toStringSlice converts an any to []string.
-func toStringSlice(v any) []string {
-	if v == nil {
-		return nil
-	}
-	arr, ok := v.([]any)
-	if !ok {
-		return nil
-	}
-	out := make([]string, 0, len(arr))
-	for _, item := range arr {
-		if s, ok := item.(string); ok {
-			out = append(out, s)
-		}
-	}
-	return out
-}

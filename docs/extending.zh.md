@@ -16,6 +16,8 @@ taichi 提供四个扩展点，按使用频率排序：
 
 > **内置技能**：taichi 内置五个技能 —— `api` / `grpc` / `ui` / `static` / `regression`。其中 `grpc` 技能（`pkg/skill/grpc`，`kind: grpc`）仅覆盖配置驱动的冒烟检查（health / connectivity / reflection），刻意不做动态 protobuf 消息构造。若需带编译好的 protobuf 桩代码进行完整的 unary/streaming RPC 测试，请实现第三方插件技能（`kind: plugin`），用小型 Go 助手导入生成的 client 包。
 
+> **插件进程环境**：插件进程会继承 taichi 父进程的全部环境变量（`os.Environ()`），并叠加为该插件配置的 `env` 字段。请注意敏感变量的隔离。
+
 ## 二、自定义技能
 
 ### 2.1 实现 TestSkill 接口

@@ -74,6 +74,9 @@ make build
 
 # 6. Override the report output directory
 ./bin/taichi run --config configs/taichi.yaml --reports-dir /tmp/taichi-reports
+
+# 7. Validate a config file without running tests
+./bin/taichi validate -c configs/taichi.yaml
 ```
 
 ## Minimal Configuration

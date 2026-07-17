@@ -70,13 +70,13 @@ type ServiceConfig struct {
 // All methods are concurrency-safe, but the lifecycle should be driven by a single coordinating goroutine.
 // Tests are expected to run from the project root so that relative paths resolve correctly.
 type ServiceLifecycle struct {
-	cfg       ServiceConfig
-	addr      string
-	baseURL   string
-	logPath   string
-	cmd       *exec.Cmd
-	logFile   *os.File
-	mu        sync.Mutex
+	cfg         ServiceConfig
+	addr        string
+	baseURL     string
+	logPath     string
+	cmd         *exec.Cmd
+	logFile     *os.File
+	mu          sync.Mutex
 	projectRoot string
 }
 
@@ -118,7 +118,7 @@ func (s *ServiceLifecycle) Start() error {
 
 	port := s.cfg.Port
 	if port == 0 {
-		p, err := findFreePort()
+		p, err := FreePort()
 		if err != nil {
 			return fmt.Errorf("find free port: %w", err)
 		}
@@ -144,6 +144,7 @@ func (s *ServiceLifecycle) Start() error {
 		cmd.Dir = s.projectRoot
 	}
 	if err := cmd.Start(); err != nil {
+		// best-effort: release log file on start-failure cleanup; the start error is the primary result.
 		_ = s.logFile.Close()
 		s.logFile = nil
 		s.logPath = ""
@@ -158,6 +159,7 @@ func (s *ServiceLifecycle) Start() error {
 		timeout = defaultHealthyTimeout
 	}
 	if err := s.waitForHealthyLocked(timeout); err != nil {
+		// best-effort: tear down the started process on health-check failure; the health error is propagated.
 		_ = s.stopLocked()
 		return fmt.Errorf("wait for healthy: %w", err)
 	}
@@ -217,6 +219,7 @@ func (s *ServiceLifecycle) waitForHealthyLocked(timeout time.Duration) error {
 	for {
 		resp, err := client.Get(url)
 		if err == nil {
+			// best-effort: drain and close the response body between poll iterations; read errors do not affect the poll loop.
 			_ = resp.Body.Close()
 			if resp.StatusCode == expected {
 				return nil
@@ -250,6 +253,7 @@ func (s *ServiceLifecycle) stopLocked() error {
 	}()
 
 	if process != nil {
+		// best-effort: signal the process to shut down gracefully; escalation to SIGKILL follows if it ignores SIGTERM.
 		_ = process.Signal(syscall.SIGTERM)
 	}
 
@@ -258,12 +262,14 @@ func (s *ServiceLifecycle) stopLocked() error {
 		// Process exited cleanly after SIGTERM.
 	case <-time.After(defaultStopGracePeriod):
 		if process != nil {
+			// best-effort: force-kill the process after the grace period expires; the result is observed via cmd.Wait below.
 			_ = process.Kill()
 		}
 		<-done
 	}
 
 	if s.logFile != nil {
+		// best-effort: release the log file handle during shutdown; nothing more can be written after this point.
 		_ = s.logFile.Close()
 		s.logFile = nil
 	}
@@ -355,8 +361,15 @@ func (s *ServiceLifecycle) openLogFile() error {
 	return nil
 }
 
-// findFreePort obtains a free port by listening on :0. There is an inherent TOCTOU race, which is acceptable for test orchestration.
-func findFreePort() (int, error) {
+// FreePort obtains a free TCP port by listening on ":0" and returning the
+// assigned port number. The listener is closed before returning, so there is
+// an inherent TOCTOU race: another process may grab the port before the caller
+// binds to it. This is acceptable for test orchestration where collisions are
+// rare and the caller will fail loudly if the port is no longer free.
+//
+// Exported so that config generators and other packages (e.g. pkg/env) can
+// reuse the same port-allocation strategy without duplicating the logic.
+func FreePort() (int, error) {
 	l, err := net.Listen("tcp", ":0")
 	if err != nil {
 		return 0, fmt.Errorf("listen: %w", err)

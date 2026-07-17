@@ -39,7 +39,7 @@ projects:
 | `EnvKindBackendNode` | `backend.node` | Node backend: start node binary |
 | `EnvKindFrontendVite` | `frontend.vite` | Vite frontend: start dev server |
 | `EnvKindFrontendNuxt` | `frontend.nuxt` | Nuxt frontend: start dev server |
-| `EnvKindCustom` | `custom` | Custom (user must implement the Environment interface) |
+| `EnvKindCustom` | `custom` | Custom: reuse the process implementation; start any-language service via `command` and poll `ready_url` |
 
 > **Important constraint**: env names (the `envs` map keys) **must not contain dots (`.`)**, otherwise viper treats them as nested key separators. Use hyphens (`-`) as separators, e.g. `tickraft-backend`.
 
@@ -70,15 +70,16 @@ Startup command assembly: `<binary> <config_flag> <config_path> <addr_flag> :<po
 envs:
   vite-local:
     kind: frontend.vite
-    command: pnpm dev             # startup command (split by space into program + args)
+    command: pnpm dev             # startup command (split into program + args; double-quoted segments with spaces are preserved, e.g. `npm "run dev" --port 5173`)
     cwd: .                        # working directory (relative to project root)
     ready_url: http://localhost:5173  # poll this URL until 2xx/4xx
     ready_text: ""                # when non-empty, response body must contain this substring
+    healthy_timeout: 60s          # wait-for-ready timeout (default 60s); also applies to custom envs
     port: 5173
     base_url: ""                  # when non-empty, skip startup
 ```
 
-The frontend environment starts a subprocess, captures stdout/stderr to a log file, and polls `ready_url` until it returns a 2xx/4xx status code (and the response body contains `ready_text`, if configured). Maximum wait is 60 seconds.
+The frontend environment starts a subprocess, captures stdout/stderr to a log file, and polls `ready_url` until it returns a 2xx/4xx status code (and the response body contains `ready_text`, if configured). Maximum wait is governed by `healthy_timeout` (default 60s).
 
 ### 3.4 Externally Hosted Environment
 

@@ -26,10 +26,7 @@ import (
 	"github.com/tickraft/taichi/pkg/i18n"
 	"github.com/tickraft/taichi/pkg/orchestrator"
 	"github.com/tickraft/taichi/pkg/skill"
-	api "github.com/tickraft/taichi/pkg/skill/api"
-	"github.com/tickraft/taichi/pkg/skill/regression"
-	"github.com/tickraft/taichi/pkg/skill/static"
-	"github.com/tickraft/taichi/pkg/skill/ui"
+	"github.com/tickraft/taichi/pkg/skill/builtin"
 )
 
 // protocolVersion is the MCP protocol version.
@@ -268,7 +265,7 @@ func (s *Server) toolRun(ctx context.Context, args map[string]any) (any, error) 
 	}
 
 	o := orchestrator.New()
-	if err := o.RegisterBuiltinSkills(builtinSkills()); err != nil {
+	if err := o.RegisterBuiltinSkills(builtin.Skills()); err != nil {
 		return nil, fmt.Errorf("register skills: %w", err)
 	}
 
@@ -332,7 +329,7 @@ func (s *Server) toolFailures(args map[string]any) (any, error) {
 
 	// Run a single test pass to obtain the failure context.
 	o := orchestrator.New()
-	if err := o.RegisterBuiltinSkills(builtinSkills()); err != nil {
+	if err := o.RegisterBuiltinSkills(builtin.Skills()); err != nil {
 		return nil, fmt.Errorf("register skills: %w", err)
 	}
 
@@ -363,9 +360,9 @@ func (s *Server) toolFailures(args map[string]any) (any, error) {
 	}
 
 	return map[string]any{
-		"has_failures":   true,
+		"has_failures":    true,
 		"failure_context": fc,
-		"summary":        formatSummary(result.Summary),
+		"summary":         formatSummary(result.Summary),
 	}, nil
 }
 
@@ -394,7 +391,7 @@ func (s *Server) toolRegression(ctx context.Context, args map[string]any) (any, 
 	}
 
 	o := orchestrator.New()
-	if err := o.RegisterBuiltinSkills(builtinSkills()); err != nil {
+	if err := o.RegisterBuiltinSkills(builtin.Skills()); err != nil {
 		return nil, fmt.Errorf("register skills: %w", err)
 	}
 
@@ -411,33 +408,23 @@ func (s *Server) toolRegression(ctx context.Context, args map[string]any) (any, 
 	return formatRunResult(result), nil
 }
 
-// builtinSkills returns the list of taichi built-in skill instances.
-func builtinSkills() []skill.TestSkill {
-	return []skill.TestSkill{
-		&api.Skill{},
-		&ui.Skill{},
-		&static.Skill{},
-		&regression.Skill{},
-	}
-}
-
 // formatRunResult formats an orchestrator.Result into an MCP response.
 func formatRunResult(r orchestrator.Result) map[string]any {
 	skillResults := make([]map[string]any, 0, len(r.SkillResults))
 	for _, sr := range r.SkillResults {
 		skillResults = append(skillResults, map[string]any{
-			"skill":   sr.SkillName,
+			"skill":    sr.SkillName,
 			"duration": sr.Duration.String(),
-			"summary": formatSummary(sr.Summary),
-			"error":   errorString(sr.Error),
+			"summary":  formatSummary(sr.Summary),
+			"error":    skill.ErrorString(sr.Error),
 		})
 	}
 	return map[string]any{
-		"project":      r.ProjectName,
-		"base_url":     r.BaseURL,
-		"duration":     r.Duration.String(),
-		"summary":      formatSummary(r.Summary),
-		"env_log":      r.EnvLogPath,
+		"project":       r.ProjectName,
+		"base_url":      r.BaseURL,
+		"duration":      r.Duration.String(),
+		"summary":       formatSummary(r.Summary),
+		"env_log":       r.EnvLogPath,
 		"skill_results": skillResults,
 	}
 }
@@ -510,12 +497,4 @@ func toJSONString(v any) string {
 		return fmt.Sprintf("error serializing result: %v", err)
 	}
 	return string(data)
-}
-
-// errorString safely converts an error to a string.
-func errorString(err error) string {
-	if err == nil {
-		return ""
-	}
-	return err.Error()
 }

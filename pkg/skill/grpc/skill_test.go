@@ -15,15 +15,15 @@ func TestSkill_Configure(t *testing.T) {
 		"timeout":  "3s",
 		"cases": []any{
 			map[string]any{
-				"name":             "health-default",
-				"type":             "health",
-				"expected_status":  "SERVING",
-				"max_latency":      "2s",
+				"name":            "health-default",
+				"type":            "health",
+				"expected_status": "SERVING",
+				"max_latency":     "2s",
 			},
 			map[string]any{
-				"name":    "dial-explicit",
-				"type":    "dial",
-				"target":  "10.0.0.1:9090",
+				"name":   "dial-explicit",
+				"type":   "dial",
+				"target": "10.0.0.1:9090",
 			},
 			map[string]any{
 				"name":              "reflect-services",
