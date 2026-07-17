@@ -34,4 +34,5 @@ formatters:
     - goimports
   settings:
     goimports:
-      local-prefixes: github.com/tickraft/taichi
+      local-prefixes:
+        - github.com/tickraft/taichi
