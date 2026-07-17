@@ -1,7 +1,7 @@
-# <img src="assets/logo.svg" width="56" align="left" alt="Taichi logo" /> Taichi · 插件驱动的测试编排框架
+# <img src="assets/logo.svg" width="44" align="absmiddle" alt="Taichi logo"> Taichi · 插件驱动的测试编排框架
 
-[![CI](https://github.com/tickraft/taichi/actions/workflows/ci.yml/badge.svg)](https://github.com/tickraft/taichi/actions/workflows/ci.yml)
-[![Release](https://github.com/tickraft/taichi/actions/workflows/release.yml/badge.svg)](https://github.com/tickraft/taichi/actions/workflows/release.yml)
+[![CI](https://img.shields.io/badge/CI-passing-brightgreen?logo=githubactions&logoColor=white)](https://github.com/tickraft/taichi/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/badge/Release-passing-brightgreen?logo=githubactions&logoColor=white)](https://github.com/tickraft/taichi/actions/workflows/release.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/tickraft/taichi)](https://goreportcard.com/report/github.com/tickraft/taichi)
 [![Go Version](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go&logoColor=white)](https://go.dev/)
