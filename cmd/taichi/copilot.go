@@ -60,12 +60,16 @@ func newCopilotCmd(gf *globalFlags) *cobra.Command {
 4. If failures remain after MaxRounds, return the final failure result
 
 Agent invocation (one of):
-  --agent-cli trae --agent-args "agent fix"
-  --agent-endpoint http://localhost:8080/fix
+  --agent-cli opencode                           # opencode (direct mode)
+  --agent-cli opencode --agent-args "--model" --agent-args "anthropic/claude-3.5-sonnet"
+  --agent-cli trae --agent-args "agent fix"      # trae (stdin/stdout JSON protocol)
+  --agent-endpoint http://localhost:8080/fix      # HTTP endpoint
 
-Agent script protocol:
-  stdin:  FailureContext JSON
-  stdout: FixResult JSON {"fixed":true,"mode":"patch","patch":"...","message":"..."}`,
+Agent protocols:
+  opencode: accepts a human-readable prompt as args, directly modifies files
+            in the project root, and modified files are detected via git.
+  others:   stdin:  FailureContext JSON
+            stdout: FixResult JSON {"fixed":true,"mode":"patch","patch":"...","message":"..."}`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runCopilot(cmd, gf, af)
 		},
@@ -82,7 +86,7 @@ Agent script protocol:
 	cmd.Flags().IntVar(&af.maxRounds, "max-rounds", 3,
 		"Maximum fix rounds (default 3)")
 	cmd.Flags().StringVar(&af.agentCLI, "agent-cli", "",
-		"AI Agent command line (e.g. trae), exchanges JSON via stdin/stdout")
+		"AI Agent command line (e.g. opencode, trae); opencode uses direct file editing, others use stdin/stdout JSON")
 	cmd.Flags().StringArrayVar(&af.agentArgs, "agent-args", nil,
 		"AI Agent command args (repeatable)")
 	cmd.Flags().StringVar(&af.agentEndpoint, "agent-endpoint", "",
@@ -157,6 +161,17 @@ func buildInvoker(af *copilotFlags) (agent.Invoker, error) {
 	}
 
 	if af.agentCLI != "" {
+		// opencode uses a different protocol than the stdin/stdout JSON
+		// protocol expected by CLIInvoker: it takes a prompt as args and
+		// modifies files directly. Detect it by command basename and use
+		// the specialized OpenCodeInvoker.
+		if agent.OpenCodeDetect(af.agentCLI) {
+			return &agent.OpenCodeInvoker{
+				Command: af.agentCLI,
+				Args:    af.agentArgs,
+				Timeout: af.agentTimeout,
+			}, nil
+		}
 		return &agent.CLIInvoker{
 			Command: af.agentCLI,
 			Args:    af.agentArgs,

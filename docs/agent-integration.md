@@ -21,8 +21,8 @@ The AI Agent takes the lead, calling taichi-exposed MCP tools on demand to run t
 Taichi takes the lead, proactively calling the AI Agent via the `agent.Invoker` interface for analysis and fixes on test failure, then auto-running regression, looping until passing or exhausting rounds.
 
 - Applicable: CI / command-line scenarios where Taichi should self-drive the "test-fix-regression" loop
-- Protocol: CLI (stdin/stdout JSON) or HTTP API
-- Information flow: taichi → Agent (pass `Context`) → Agent returns `FixResult` → Taichi applies and regresses
+- Protocol: three built-in — CLI stdin/stdout JSON (`CLIInvoker`), CLI prompt-args + direct file editing (`OpenCodeInvoker`), or HTTP API (`HTTPInvoker`)
+- Information flow: taichi → Agent (pass `Context`) → Agent returns `FixResult` (or modifies files directly) → Taichi applies and regresses
 
 ### Failure Context: Information Exchange Contract
 
@@ -174,9 +174,20 @@ The taichi-driven copilot mode is triggered via the `taichi copilot` command, au
 ### 4.1 CLI Invocation
 
 ```bash
+# opencode (direct file editing, prompt-args protocol)
+taichi copilot -c configs/taichi.yaml \
+  --agent-cli opencode \
+  --max-rounds 3
+
+# trae (stdin/stdout JSON protocol)
 taichi copilot -c configs/taichi.yaml \
   --agent-cli trae \
   --agent-args "agent fix" \
+  --max-rounds 3
+
+# HTTP endpoint
+taichi copilot -c configs/taichi.yaml \
+  --agent-endpoint http://localhost:8080/fix \
   --max-rounds 3
 ```
 
@@ -200,8 +211,11 @@ taichi copilot -c configs/taichi.yaml \
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `-c, --config` | Config file path | `configs/taichi.yaml` |
-| `--agent-cli` | AI Agent CLI executable (e.g. `trae`, `python3`) | required |
-| `--agent-args` | Arguments passed to the Agent command | empty |
+| `--agent-cli` | AI Agent CLI executable (e.g. `opencode`, `trae`, `python3`); `opencode` uses direct file editing, others use stdin/stdout JSON | required |
+| `--agent-args` | Arguments passed to the Agent command (repeatable) | empty |
+| `--agent-endpoint` | AI Agent HTTP endpoint (mutually exclusive with `--agent-cli`) | empty |
+| `--agent-token` | Bearer token for HTTP mode | empty |
+| `--agent-timeout` | Single Agent invocation timeout | `5m` |
 | `--max-rounds` | Maximum fix rounds | `3` |
 | `--project` | Project under test | first project in config |
 | `--timeout` | Single round test timeout | unlimited |
@@ -211,7 +225,7 @@ taichi copilot -c configs/taichi.yaml \
 
 ## 5. Agent Invoker Implementation
 
-Taichi abstracts AI Agent invocation via the `agent.Invoker` interface, with two built-in implementations and custom support.
+Taichi abstracts AI Agent invocation via the `agent.Invoker` interface, with three built-in implementations and custom support.
 
 ### 5.1 Invoker Interface
 
@@ -262,7 +276,45 @@ Contract:
 - Auth: if `Token` is non-empty, append `Authorization: Bearer <Token>` header
 - Response: HTTP 200, body is `FixResult` JSON; non-200 is treated as failure
 
-### 5.4 Custom Invoker
+### 5.4 OpenCodeInvoker: opencode CLI Invocation
+
+Invokes the [opencode](https://github.com/sst/opencode) CLI as the AI Agent. Unlike `CLIInvoker`, opencode does NOT use the stdin/stdout JSON protocol — it accepts a human-readable prompt as command-line args, directly modifies files in the working directory (direct mode), and its stdout is human-readable text. Taichi detects the modified files post-run via `git status --porcelain` (with an mtime-based fallback for non-git projects).
+
+```go
+invoker := &agent.OpenCodeInvoker{
+    Command: "opencode",                 // opencode binary path, empty defaults to "opencode"
+    Args:    []string{"--model", "anthropic/claude-3.5-sonnet"}, // extra args for `opencode run`
+    Timeout: 15 * time.Minute,           // single call timeout, 0 means default 15 minutes
+    WorkDir: "/path/to/project",         // overrides fc.ProjectRoot
+}
+```
+
+Contract:
+- args: `opencode run [extra args] "<prompt>"` — taichi builds the prompt from the `Context`
+- stdout/stderr: inherited by the parent process (user sees opencode's progress live)
+- stdin: not used (opencode does not read stdin in run mode)
+- file modifications: opencode edits files directly in `WorkDir`
+- detection: taichi snapshots `git status` before invocation and diffs after, attributing only newly-modified files to opencode (pre-existing dirty files are excluded)
+- non-git fallback: taichi scans for source files with mtime ≥ snapshot time
+- exit code: non-zero is treated as call failure
+
+When using `taichi copilot`, the opencode binary is auto-detected from `--agent-cli` by command basename (e.g. `opencode`, `/usr/local/bin/opencode`, `opencode.exe` all match). No extra flags are needed:
+
+```bash
+# Basic usage
+taichi copilot -c configs/taichi.yaml --agent-cli opencode
+
+# With a specific model
+taichi copilot -c configs/taichi.yaml \
+  --agent-cli opencode \
+  --agent-args "--model" --agent-args "anthropic/claude-3.5-sonnet"
+```
+
+Subdirectory path handling: when the project root is a subdirectory of a larger git repository, `git status --porcelain` reports paths relative to the repo root. `OpenCodeInvoker` uses `git rev-parse --show-prefix` to normalize paths back to project-root-relative, so downstream `VerifyDirectFix` can resolve them correctly.
+
+> Implementation: [`pkg/agent/opencode.go`](../pkg/agent/opencode.go). Auto-detection: `OpenCodeDetect` in the same file. Wired into `taichi copilot` via `buildInvoker` in [`cmd/taichi/copilot.go`](../cmd/taichi/copilot.go).
+
+### 5.5 Custom Invoker
 
 Implement the `agent.Invoker` interface to connect any Agent backend (e.g. gRPC, message queue, built-in LLM call):
 
