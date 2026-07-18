@@ -11,7 +11,7 @@
 //	  backend.go:
 //	    kind: backend.go
 //	    binary: bin/tickraft
-//	    build_target: ./cmd/tickraft
+//	    build: go build -o bin/tickraft ./cmd/tickraft
 //	    config_path: configs/config.yaml
 //	    config_flag: --config
 //	    addr_flag: --addr
@@ -21,6 +21,11 @@
 //	    command: pnpm dev
 //	    port: 5173
 //	    base_url: http://localhost:5173
+//	  custom:
+//	    kind: custom
+//	    command: ./bin/server
+//	    build: make build        # optional: rebuild before each start
+//	    ready_url: http://localhost:8080
 //	skills:
 //	  - name: api
 //	    enabled: true
@@ -100,7 +105,6 @@ type Env struct {
 
 	// Backend fields (used when Kind=backend.*).
 	BinaryPath     string   `mapstructure:"binary"`
-	BuildTarget    string   `mapstructure:"build_target"`
 	ConfigPath     string   `mapstructure:"config_path"`
 	ConfigFlag     string   `mapstructure:"config_flag"`
 	AddrFlag       string   `mapstructure:"addr_flag"`
@@ -114,6 +118,18 @@ type Env struct {
 	Cwd       string `mapstructure:"cwd"`
 	ReadyURL  string `mapstructure:"ready_url"`
 	ReadyText string `mapstructure:"ready_text"`
+
+	// Build is the pre-start build step — a shell command executed via `sh -c`
+	// before the service starts. Semantics are uniform across all env kinds:
+	//   - backend.go: runs in the project root (e.g. "go build -o bin/app ./cmd/app",
+	//     "make build"); the binary is always rebuilt on each Start so source
+	//     changes are picked up (critical for copilot regression).
+	//   - backend.node / custom / frontend.*: runs in Cwd before Command launches
+	//     (e.g. "cargo build", "./gradlew build", "pnpm build"). A non-zero exit
+	//     aborts Start.
+	// When empty, no build step runs: backend.* requires the binary to already
+	// exist, and custom/frontend.* start Command directly.
+	Build string `mapstructure:"build"`
 }
 
 // HealthyTimeoutDuration parses the healthy_timeout field into a time.Duration. Returns 0 when empty.

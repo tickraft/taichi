@@ -49,8 +49,8 @@ projects:
 envs:
   tickraft-backend:
     kind: backend.go
-    binary: bin/tickraft           # 二进制路径（相对项目根）；不存在时自动构建
-    build_target: ./cmd/tickraft   # go build 目标
+    binary: bin/tickraft           # 二进制路径（相对项目根）；当 build 配置时每次 Start 都重新构建
+    build: go build -o bin/tickraft ./cmd/tickraft   # shell 命令，通过 `sh -c` 在项目根执行；支持任意构建命令（go build、make 等）。每次 Start 前都执行以加载最新源码（如 copilot 修复后的回归）。为空时要求二进制已存在
     config_path: configs/config.yaml  # 配置文件路径（相对项目根）
     config_flag: --config         # 配置参数名
     addr_flag: --addr             # 监听地址参数名
@@ -72,6 +72,7 @@ envs:
     kind: frontend.vite
     command: pnpm dev             # 启动命令（拆分为程序+参数；保留双引号包裹的含空格段，如 `npm "run dev" --port 5173`）
     cwd: .                        # 工作目录（相对项目根）
+    build: ""             # 可选的预启动构建步骤（shell 命令，通过 `sh -c` 在 cwd 中、command 之前执行）；支持任意构建命令，如 `cargo build`、`./gradlew build`、`go build -o bin/app ./cmd/app`、`make build`。为空（默认）则跳过构建直接运行 command
     ready_url: http://localhost:5173  # 轮询此 URL 直到 2xx/4xx
     ready_text: ""                # 非空时还要求响应体包含此子串
     healthy_timeout: 60s          # 等待就绪超时（默认 60s）；同样适用于 custom 环境
@@ -80,6 +81,8 @@ envs:
 ```
 
 前端环境启动子进程，捕获 stdout/stderr 到日志文件，轮询 `ready_url` 直到返回 2xx/4xx 状态码（且响应体包含 `ready_text`，若配置）。最长等待时长由 `healthy_timeout` 控制（默认 60s）。
+
+当 `build` 非空时，它通过 `sh -c` 在解析后的 `cwd` 中（应用同样的 `env`）于 `command` 启动前执行。`build` 退出码非零将中止 Start。此字段适用于通过 `kind: custom` 驱动的编译型语言（如 Rust、Java），使每次测试运行（含 copilot 回归轮次）都加载最新源码。`build` 为空时直接运行 `command`，保持原有行为。`build` 字段在所有 env kind 中语义统一为 shell 命令——`backend.go` 在项目根执行，`custom`/`frontend.*` 在 `cwd` 中执行。
 
 ### 3.4 外部托管环境
 

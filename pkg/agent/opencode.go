@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -105,7 +104,8 @@ func (o *OpenCodeInvoker) AnalyzeAndFix(ctx context.Context, fc *failure.Context
 	prompt := buildOpenCodePrompt(fc)
 
 	// Assemble the command: opencode run [extra args] "<prompt>"
-	cmdArgs := []string{"run"}
+	cmdArgs := make([]string, 0, 2+len(o.Args)+1)
+	cmdArgs = append(cmdArgs, "run")
 	cmdArgs = append(cmdArgs, o.Args...)
 	cmdArgs = append(cmdArgs, prompt)
 
@@ -411,13 +411,4 @@ func OpenCodeDetect(command string) bool {
 	}
 	base = strings.TrimSuffix(base, ".exe")
 	return base == "opencode"
-}
-
-// openCodePromptJSON is a small helper for tests: it marshals the prompt to
-// JSON so tests can verify the prompt content without depending on exact
-// whitespace.
-func openCodePromptJSON(fc *failure.Context) string {
-	prompt := buildOpenCodePrompt(fc)
-	data, _ := json.Marshal(prompt)
-	return string(data)
 }

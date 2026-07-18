@@ -67,7 +67,7 @@ Agent 应按以下步骤分析项目，逐步收集配置所需的字段。
 |------|----------|
 | `project_name` | Go：`go.mod` 的 module 路径最后一段；Node：`package.json` 的 `name` 字段；其余：根目录名 |
 | `project.root` | 相对 `taichi.yaml` 输出位置的项目根目录路径 |
-| `build_target` | Go：`./cmd/<project_name>` 或扫描 `cmd/` 子目录；Node：无需 |
+| `build` | Go：`go build -o bin/<project_name> ./cmd/<project_name>`（或扫描 `cmd/` 子目录）；亦支持任意 shell 命令经 `sh -c` 执行（如 `make build`）；Node：无需 |
 | `binary` | Go：`bin/<project_name>`；Node：无需 |
 | `config_path` | 优先 `configs/config.yaml`，其次 `config.yaml`、`configs/config.yml`、`configs/<project_name>.yaml` |
 | `config_flag` | Go：`--config`；Node：从 `scripts.start` 中提取，默认 `--config` |
@@ -227,7 +227,7 @@ envs:
   <project_name>-backend:
     kind: backend.go
     binary: bin/<project_name>
-    build_target: ./cmd/<project_name>
+    build: go build -o bin/<project_name> ./cmd/<project_name>
     config_path: configs/config.yaml
     config_flag: --config
     addr_flag: --addr
@@ -383,7 +383,7 @@ skills:
 ```yaml
 envs:
   <project_name>-external:
-    kind: backend.go           # kind 仍需指定，但 binary/build_target 可省略
+    kind: backend.go           # kind 仍需指定，但 binary/build 可省略
     base_url: http://localhost:8080
     health_path: /api/v1/health
 ```

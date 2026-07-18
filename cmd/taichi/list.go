@@ -70,8 +70,8 @@ func listConfig(cmd *cobra.Command, gf *globalFlags) error {
 		if e.BinaryPath != "" {
 			_, _ = fmt.Fprintf(out, "      %s:   %s\n", i18n.T("cli.list.label.binary"), e.BinaryPath)
 		}
-		if e.BuildTarget != "" {
-			_, _ = fmt.Fprintf(out, "      %s:    %s\n", i18n.T("cli.list.label.build"), e.BuildTarget)
+		if e.Build != "" {
+			_, _ = fmt.Fprintf(out, "      %s:    %s\n", i18n.T("cli.list.label.build"), e.Build)
 		}
 		if e.HealthPath != "" {
 			_, _ = fmt.Fprintf(out, "      %s:   %s\n", i18n.T("cli.list.label.health"), e.HealthPath)

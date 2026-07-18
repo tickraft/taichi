@@ -49,8 +49,8 @@ projects:
 envs:
   tickraft-backend:
     kind: backend.go
-    binary: bin/tickraft           # binary path (relative to project root); auto-built if missing
-    build_target: ./cmd/tickraft   # go build target
+    binary: bin/tickraft           # binary path (relative to project root); rebuilt on every Start when build is set
+    build: go build -o bin/tickraft ./cmd/tickraft   # shell command run via `sh -c` in project root before Start; supports any build command (go build, make, etc.). Always runs to pick up source changes (critical for copilot regression). When empty, binary must already exist
     config_path: configs/config.yaml  # config file path (relative to project root)
     config_flag: --config         # config parameter name
     addr_flag: --addr             # listen address parameter name
@@ -72,6 +72,7 @@ envs:
     kind: frontend.vite
     command: pnpm dev             # startup command (split into program + args; double-quoted segments with spaces are preserved, e.g. `npm "run dev" --port 5173`)
     cwd: .                        # working directory (relative to project root)
+    build: ""             # optional pre-start build step (shell command run via `sh -c` in cwd before command); supports any build command, e.g. `cargo build`, `./gradlew build`, `go build -o bin/app ./cmd/app`, `make build`. Empty (default) skips the build step and runs command directly.
     ready_url: http://localhost:5173  # poll this URL until 2xx/4xx
     ready_text: ""                # when non-empty, response body must contain this substring
     healthy_timeout: 60s          # wait-for-ready timeout (default 60s); also applies to custom envs
@@ -80,6 +81,8 @@ envs:
 ```
 
 The frontend environment starts a subprocess, captures stdout/stderr to a log file, and polls `ready_url` until it returns a 2xx/4xx status code (and the response body contains `ready_text`, if configured). Maximum wait is governed by `healthy_timeout` (default 60s).
+
+When `build` is non-empty, it runs via `sh -c` in the resolved `cwd` (with the same `env` applied) before `command` is launched. A non-zero exit aborts Start. This is useful for compiled languages driven via `kind: custom` (e.g. Rust, Java) so that each test run — including copilot regression rounds — exercises the latest source. When `build` is empty, Start runs `command` directly, preserving the original behavior. The `build` field has the same shell-command semantics across all env kinds — for `backend.go` it runs in the project root, for `custom`/`frontend.*` it runs in `cwd`.
 
 ### 3.4 Externally Hosted Environment
 

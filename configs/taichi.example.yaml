@@ -29,8 +29,8 @@ envs:
   # --- Go backend: auto build binary and start ---
   go-local:
     kind: backend.go
-    binary: bin/my-service           # Relative to project root; auto `go build` if missing
-    build_target: ./cmd/my-service   # go build target
+    binary: bin/my-service           # Relative to project root; rebuilt on every Start when build is set
+    build: go build -o bin/my-service ./cmd/my-service  # shell command run via `sh -c` in project root; supports any build command (go build, make, etc.). Always runs so source changes are picked up (e.g. copilot regression). Empty = binary must already exist
     config_path: configs/config.yaml
     config_flag: --config
     addr_flag: --addr                # Startup arg becomes --addr :<port>
@@ -44,7 +44,7 @@ envs:
   node-local:
     kind: backend.node
     binary: node                     # or npx tsx
-    build_target: ""                 # Node does not need `go build`; if empty, binary must already exist
+    build: ""                 # Node does not need a build step; if empty, binary must already exist
     args: [dist/index.js, --port, ":PORT:"]  # :PORT: placeholder is replaced with the actual port
     health_path: /healthz
     healthy_timeout: 20s
@@ -65,6 +65,19 @@ envs:
     cwd: .
     ready_url: http://localhost:3000
     port: 3000
+
+  # --- Custom: any-language service driven via command + ready_url ---
+  # build is an optional pre-start build step for compiled languages
+  # (Rust / Java / Go-as-custom etc.); it runs in cwd before command and
+  # aborts Start on non-zero exit. Empty (default) runs command directly.
+  rust-local:
+    kind: custom
+    command: ./bin/my-rust-app        # Startup command (program + args split by spaces)
+    build: cargo build        # Optional: rebuilt before every Start so each test run exercises the latest source
+    cwd: .                            # Working directory relative to project root
+    ready_url: http://localhost:8080  # Poll this URL until 2xx/4xx
+    healthy_timeout: 60s
+    port: 8080
 
   # --- Externally managed: service is already running, taichi just accesses it; no start/stop ---
   external:

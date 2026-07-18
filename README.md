@@ -93,7 +93,7 @@ envs:
   my-service-env:
     kind: backend.go
     binary: bin/my-service
-    build_target: ./cmd/my-service
+    build: go build -o bin/my-service ./cmd/my-service
     health_path: /api/v1/health
     healthy_timeout: 30s
 

@@ -418,6 +418,11 @@ func TestScanModifiedByMtime(t *testing.T) {
 	time.Sleep(1100 * time.Millisecond)
 	snapshotTime := time.Now()
 
+	// Sleep briefly so the new file's mtime is strictly greater than
+	// snapshotTime. Filesystem mtime granularity (and clock skew under -race)
+	// can otherwise cause the write to land at or before snapshotTime.
+	time.Sleep(50 * time.Millisecond)
+
 	// Create a new file (modified after snapshot).
 	newPath := filepath.Join(dir, "new.go")
 	writeFile(t, newPath, "package new\n")

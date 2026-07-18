@@ -32,11 +32,14 @@ const (
 // All project-specific parameters are extracted into fields so ServiceLifecycle can serve any Go binary.
 type ServiceConfig struct {
 	// BinaryPath is the build artifact path, relative to the project root. For example "bin/tickraft".
-	// If it does not exist, Start will invoke go build on BuildTarget.
+	// If it does not exist, Start will invoke the Build command.
 	BinaryPath string
-	// BuildTarget is the go build target, for example "./cmd/tickraft".
-	// Used only when BinaryPath does not exist.
-	BuildTarget string
+	// Build is an optional pre-start build command executed via `sh -c` in the
+	// project root. When non-empty, it always runs before Start so that source
+	// changes are picked up (critical for copilot regression). Example values:
+	// "go build -o bin/app ./cmd/app", "make build", "cargo build".
+	// When empty, the binary must already exist.
+	Build string
 	// ConfigPath is the config file path (relative to the project root). An empty string means no config argument is passed.
 	ConfigPath string
 	// ConfigFlag is the config argument name, for example "--config". An empty string means no config argument is sent.
@@ -306,35 +309,63 @@ func (s *ServiceLifecycle) ServerLogPath() string {
 }
 
 // absBinaryPath returns the absolute binary path after resolving the project root (if set).
+// The result is always absolute so that exec can find the binary even when cmd.Dir is set
+// to the project root (which changes the process working directory).
 func (s *ServiceLifecycle) absBinaryPath() string {
-	if s.projectRoot == "" {
-		return s.cfg.BinaryPath
+	if s.cfg.BinaryPath == "" {
+		return ""
 	}
 	if filepath.IsAbs(s.cfg.BinaryPath) {
 		return s.cfg.BinaryPath
 	}
-	return filepath.Join(s.projectRoot, s.cfg.BinaryPath)
+	joined := s.cfg.BinaryPath
+	if s.projectRoot != "" {
+		joined = filepath.Join(s.projectRoot, s.cfg.BinaryPath)
+	}
+	abs, err := filepath.Abs(joined)
+	if err != nil {
+		return joined
+	}
+	return abs
 }
 
-// ensureBinary builds the binary when it does not exist.
+// ensureBinary ensures the binary is up to date with the current source.
+//
+// Behavior:
+//   - If BinaryPath is empty, returns an error.
+//   - If Build is empty, the binary is assumed to be pre-built; taichi
+//     only checks that it exists.
+//   - If Build is non-empty, taichi always runs it via `sh -c` so that the
+//     binary reflects the latest source. This is critical for the copilot
+//     test→fix→regression loop: without a rebuild, regression would load the
+//     stale binary produced before the Agent's fix.
+//     The command runs in the project root and may use shell features
+//     (pipes, &&, env vars). Examples: "go build -o bin/app ./cmd/app",
+//     "make build", "cargo build".
 func (s *ServiceLifecycle) ensureBinary() error {
 	bp := s.absBinaryPath()
 	if bp == "" {
 		return fmt.Errorf("binary path is empty")
 	}
-	if _, err := os.Stat(bp); err == nil {
+	if s.cfg.Build == "" {
+		// No build command configured: caller manages the binary externally.
+		// Require it to already exist.
+		if _, err := os.Stat(bp); err != nil {
+			return fmt.Errorf("binary %s not found and build is empty: %w", bp, err)
+		}
 		return nil
 	}
-	if s.cfg.BuildTarget == "" {
-		return fmt.Errorf("binary %s not found and BuildTarget is empty", bp)
-	}
-	cmd := exec.Command("go", "build", "-o", bp, s.cfg.BuildTarget)
+	// Build configured: always run it to pick up source changes.
+	cmd := exec.Command("sh", "-c", s.cfg.Build)
 	if s.projectRoot != "" {
 		cmd.Dir = s.projectRoot
 	}
+	if len(s.cfg.Env) > 0 {
+		cmd.Env = append(os.Environ(), s.cfg.Env...)
+	}
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("go build: %w: %s", err, output)
+		return fmt.Errorf("build: %w: %s", err, output)
 	}
 	return nil
 }

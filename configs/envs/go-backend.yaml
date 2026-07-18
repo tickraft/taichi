@@ -13,17 +13,18 @@
 # ========================================================================
 # Approach 1 (recommended): pure Go binary, using the backend.go type
 # ------------------------------------------------------------------------
-# Applicable scenario: CI / formal testing. taichi automatically runs `go build`
-# to produce the binary and manages its lifecycle. Supports structured fields
-# such as build_target / config_path / addr_flag / health_path. Port can be
-# auto-allocated (port: 0); no need to write a startup command by hand.
+# Applicable scenario: CI / formal testing. taichi runs the `build` shell
+# command (via `sh -c`) to produce the binary and manages its lifecycle.
+# Supports structured fields such as build / config_path / addr_flag /
+# health_path. Port can be auto-allocated (port: 0); no need to write a
+# startup command by hand.
 # ========================================================================
 #
 # envs:
 #   go-backend:
 #     kind: backend.go
-#     binary: bin/server            # Relative to project root; auto `go build` if missing
-#     build_target: ./cmd/server    # go build target
+#     binary: bin/server            # Relative to project root; rebuilt on every Start when build is set
+#     build: go build -o bin/server ./cmd/server  # shell command run via `sh -c` in project root; supports any build command (go build, make, etc.). Always runs to pick up source changes. Empty = binary must already exist
 #     config_path: configs/config.yaml
 #     config_flag: --config
 #     addr_flag: --addr             # Startup arg becomes --addr :<port>

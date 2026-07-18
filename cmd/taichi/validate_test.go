@@ -53,7 +53,7 @@ envs:
   tickraft-backend:
     kind: backend.go
     binary: bin/tickraft
-    build_target: ./cmd/tickraft
+    build: go build -o bin/tickraft ./cmd/tickraft
     config_path: configs/config.yaml
     config_flag: --config
     addr_flag: --addr
