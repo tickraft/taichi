@@ -1,0 +1,160 @@
+# taichi config for the go-buggy-backend example project.
+#
+# This project is a deliberately broken Go service that exposes both HTTP API
+# and gRPC (ProductService) endpoints. It covers the backend.go env type and
+# exercises all six skill kinds: api / grpc / ui / static / regression / plugin.
+# Most cases are expected to FAIL, demonstrating taichi's failure detection.
+
+projects:
+  - name: go-buggy-backend
+    root: .
+    env: go-backend-buggy
+    skills: [api, grpc, ui, static, regression, grpc-product-check]
+
+envs:
+  go-backend-buggy:
+    kind: backend.go
+    binary: bin/go-buggy-backend
+    build_target: .
+    addr_flag: --addr
+    health_path: /api/v1/health
+    healthy_timeout: 30s
+    port: 0
+
+# ========== Skills ==========
+skills:
+  # --- API skill: HTTP endpoint assertions ---
+  - name: api
+    kind: api
+    enabled: true
+    priority: 0
+    raw:
+      timeout: 5s
+      cases:
+        - name: Health
+          method: GET
+          path: /api/v1/health
+          expected_status: 200
+          expected_code: 0
+          expected_field: data.status
+          expected_value: healthy
+          max_latency: 500ms
+        - name: UsersList
+          method: GET
+          path: /api/v1/users
+          expected_status: 200
+          expected_code: 0
+        - name: ProductsList
+          method: GET
+          path: /api/v1/products
+          expected_status: 200
+          expected_code: 0
+          max_latency: 500ms
+        - name: ProductsFieldCheck
+          method: GET
+          path: /api/v1/products
+          expected_status: 200
+          expected_code: 0
+          expected_field: data.items.0.name
+          expected_value: Widget
+        - name: NotFound
+          method: GET
+          path: /api/v1/nonexistent
+          expected_status: 404
+
+  # --- gRPC skill: health / dial / reflect ---
+  - name: grpc
+    kind: grpc
+    enabled: true
+    priority: 0
+    raw:
+      timeout: 5s
+      target: 127.0.0.1:50051
+      insecure: true
+      cases:
+        - name: HealthCheck
+          type: health
+          expected_status: SERVING
+          max_latency: 500ms
+        - name: DialCheck
+          type: dial
+        - name: ReflectCheck
+          type: reflect
+          expected_services:
+            - grpc.health.v1.Health
+            - product.ProductService
+            - product.InventoryService
+
+  # --- UI skill: page accessibility ---
+  - name: ui
+    kind: ui
+    enabled: true
+    priority: 10
+    raw:
+      timeout: 5s
+      pages:
+        - path: /
+          contains: [<html, <div id="app"]
+          max_latency: 2s
+        - path: /api/v1/products
+          contains: [items]
+
+  # --- Static skill: assets + SPA fallback ---
+  - name: static
+    kind: static
+    enabled: true
+    priority: 20
+    raw:
+      timeout: 5s
+      pages:
+        - /
+        - /nonexistent-spa-route
+      assets:
+        - /favicon.ico
+        - /assets/app.js
+
+  # --- Regression skill: critical path re-probe ---
+  - name: regression
+    kind: regression
+    enabled: true
+    priority: 30
+    raw:
+      timeout: 5s
+      cases:
+        - name: Health
+          path: /api/v1/health
+          expected_status: 200
+          expected_code: 0
+        - name: ProductsList
+          path: /api/v1/products
+          expected_status: 200
+          expected_code: 0
+        - name: Homepage
+          path: /
+          expected_status: 200
+          skip_on_404: false
+
+  # --- Plugin skill: gRPC ProductService business RPC verification ---
+  # This plugin calls GetProduct(1) and ListProducts, asserting the returned
+  # price and product count. The server has an intentional price bug.
+  - name: grpc-product-check
+    kind: plugin
+    enabled: true
+    priority: 40
+    raw:
+      command: ./bin/grpc-check
+      timeout: 10s
+      grpc_target: 127.0.0.1:50051
+      expected_price: 99.99
+      expected_total: 2
+
+# ========== Report ==========
+report:
+  suite_name: taichi-go-buggy-backend
+  output_dir: reports
+  formats: [json, junit, summary]
+
+# ========== Auto Fix ==========
+autofix:
+  enabled: false
+  reports_dir: reports/errors

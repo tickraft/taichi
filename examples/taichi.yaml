@@ -1,0 +1,201 @@
+# taichi master config for the examples directory.
+#
+# This config references all buggy example projects and defines all six skill
+# kinds (api / grpc / ui / static / regression / plugin), providing full
+# coverage of taichi's configuration surface for integration testing.
+#
+# Usage:
+#   taichi run -c examples/taichi.yaml                  # run all projects
+#   taichi run -c examples/taichi.yaml -p go-buggy-backend  # run one project
+#   taichi run -c examples/taichi.yaml -s api,grpc      # filter by skill
+#
+# Prerequisites per project:
+#   go-buggy-backend:      cd go-buggy-backend && make build
+#   python-fastapi-buggy:  pip install -r python-fastapi-buggy/requirements.txt
+#   node-express-buggy:    cd node-express-buggy && npm install
+#   frontend-vite-buggy:   cd frontend-vite-buggy && npm install
+#   external-buggy:        cd external-buggy && ./start.sh (run in separate terminal)
+
+projects:
+  - name: go-buggy-backend
+    root: ./go-buggy-backend
+    env: go-backend-buggy
+    skills: [api, grpc, ui, static, regression, grpc-product-check]
+
+  - name: python-fastapi-buggy
+    root: ./python-fastapi-buggy
+    env: fastapi-buggy
+    skills: [api, ui, static, regression]
+
+  - name: node-express-buggy
+    root: ./node-express-buggy
+    env: express-buggy
+    skills: [api, ui, static, regression]
+
+  - name: frontend-vite-buggy
+    root: ./frontend-vite-buggy
+    env: vite-buggy
+    skills: [ui, static]
+
+  - name: external-buggy
+    root: ./external-buggy
+    env: external-service
+    skills: [api, ui, static, regression]
+
+envs:
+  # --- backend.go: pure Go binary with auto build ---
+  go-backend-buggy:
+    kind: backend.go
+    binary: bin/go-buggy-backend
+    build_target: .
+    addr_flag: --addr
+    health_path: /api/v1/health
+    healthy_timeout: 30s
+    port: 0
+
+  # --- custom: Python FastAPI via uvicorn ---
+  fastapi-buggy:
+    kind: custom
+    command: python3 -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+    cwd: .
+    ready_url: http://127.0.0.1:8000
+    healthy_timeout: 30s
+    env:
+      - APP_ENV=test
+
+  # --- custom: Node.js Express via node binary ---
+  express-buggy:
+    kind: custom
+    command: node src/server.js
+    cwd: .
+    ready_url: http://127.0.0.1:3000
+    healthy_timeout: 20s
+    env:
+      - NODE_ENV=test
+      - PORT=3000
+
+  # --- frontend.vite: Vite dev server ---
+  vite-buggy:
+    kind: frontend.vite
+    command: npm run dev
+    cwd: .
+    ready_url: http://127.0.0.1:5174
+    port: 5174
+    healthy_timeout: 30s
+
+  # --- external: externally managed service (start via start.sh first) ---
+  external-service:
+    kind: custom
+    base_url: http://127.0.0.1:18090
+
+# ========== Skills ==========
+# Skill configs are shared across projects; each project filters via skills[].
+skills:
+  - name: api
+    kind: api
+    enabled: true
+    priority: 0
+    raw:
+      timeout: 5s
+      cases:
+        - name: Health
+          method: GET
+          path: /api/v1/health
+          expected_status: 200
+          expected_code: 0
+          expected_field: data.status
+          expected_value: healthy
+          max_latency: 500ms
+        - name: UsersList
+          method: GET
+          path: /api/v1/users
+          expected_status: 200
+          expected_code: 0
+        - name: ProductsList
+          method: GET
+          path: /api/v1/products
+          expected_status: 200
+          expected_code: 0
+
+  - name: grpc
+    kind: grpc
+    enabled: true
+    priority: 0
+    raw:
+      timeout: 5s
+      target: 127.0.0.1:50051
+      insecure: true
+      cases:
+        - name: HealthCheck
+          type: health
+          expected_status: SERVING
+        - name: DialCheck
+          type: dial
+        - name: ReflectCheck
+          type: reflect
+          expected_services:
+            - grpc.health.v1.Health
+            - product.ProductService
+            - product.InventoryService
+
+  - name: ui
+    kind: ui
+    enabled: true
+    priority: 10
+    raw:
+      timeout: 5s
+      pages:
+        - path: /
+          contains: [<html, <div id="app"]
+          max_latency: 2s
+
+  - name: static
+    kind: static
+    enabled: true
+    priority: 20
+    raw:
+      timeout: 5s
+      pages:
+        - /
+        - /nonexistent-page
+      assets:
+        - /favicon.ico
+        - /assets/app.js
+
+  - name: regression
+    kind: regression
+    enabled: true
+    priority: 30
+    raw:
+      timeout: 5s
+      cases:
+        - name: Health
+          path: /api/v1/health
+          expected_status: 200
+          expected_code: 0
+        - name: Homepage
+          path: /
+          expected_status: 200
+          skip_on_404: true
+
+  - name: grpc-product-check
+    kind: plugin
+    enabled: true
+    priority: 40
+    raw:
+      command: ./go-buggy-backend/bin/grpc-check
+      timeout: 10s
+      grpc_target: 127.0.0.1:50051
+      expected_price: 99.99
+      expected_total: 2
+
+# ========== Report ==========
+report:
+  suite_name: taichi-examples
+  output_dir: reports
+  formats: [json, junit, summary]
+
+# ========== Auto Fix ==========
+autofix:
+  enabled: false
+  reports_dir: reports/errors

@@ -1,0 +1,13 @@
+{
+  "name": "node-express-buggy",
+  "version": "0.1.0",
+  "description": "Deliberately broken Express service for taichi integration testing",
+  "private": true,
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.0"
+  }
+}

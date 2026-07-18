@@ -1,0 +1,135 @@
+# taichi config for the python-fastapi-buggy example project.
+#
+# This project is a deliberately broken Python FastAPI service. It covers the
+# `custom` env type (uvicorn startup) and exercises the api / ui / static /
+# regression skills. Most cases are expected to FAIL.
+#
+# Intentional bugs:
+#   - /health                   returns status="down" (expected "up")
+#   - /api/v1/items             returns 500 (expected 200)
+#   - /api/v1/orders/1          returns total=50.00 (expected 100.00)
+#   - /                          missing <div id="app"> marker
+
+projects:
+  - name: python-fastapi-buggy
+    root: .
+    env: fastapi-buggy
+    skills: [api, ui, static, regression]
+
+envs:
+  fastapi-buggy:
+    kind: custom
+    command: python3 -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+    cwd: .
+    ready_url: http://127.0.0.1:8000
+    healthy_timeout: 30s
+    env:
+      - APP_ENV=test
+
+skills:
+  - name: api
+    kind: api
+    enabled: true
+    priority: 0
+    raw:
+      timeout: 5s
+      cases:
+        - name: Health
+          method: GET
+          path: /health
+          expected_status: 200
+          expected_code: 0
+          expected_field: data.status
+          expected_value: up
+          max_latency: 500ms
+        - name: ItemsList
+          method: GET
+          path: /api/v1/items
+          expected_status: 200
+          expected_code: 0
+        - name: OrderDetail
+          method: GET
+          path: /api/v1/orders/1
+          expected_status: 200
+          expected_code: 0
+          expected_field: data.total
+          expected_value: 100.00
+        - name: OrderDetail2
+          method: GET
+          path: /api/v1/orders/2
+          expected_status: 200
+          expected_code: 0
+          expected_field: data.total
+          expected_value: 75.00
+        - name: Version
+          method: GET
+          path: /api/v1/version
+          expected_status: 200
+          expected_code: 0
+          expected_field: data.version
+          expected_value: 0.1.0
+        - name: Status
+          method: GET
+          path: /api/v1/status
+          expected_status: 200
+          expected_code: 0
+          expected_field: data.region
+          expected_value: us-east-1
+
+  - name: ui
+    kind: ui
+    enabled: true
+    priority: 10
+    raw:
+      timeout: 5s
+      pages:
+        - path: /
+          contains: [<html, <div id="app"]
+          max_latency: 2s
+        - path: /api/v1/version
+          contains: [version]
+
+  - name: static
+    kind: static
+    enabled: true
+    priority: 20
+    raw:
+      timeout: 5s
+      pages:
+        - /
+      assets:
+        - /favicon.ico
+        - /static/style.css
+
+  - name: regression
+    kind: regression
+    enabled: true
+    priority: 30
+    raw:
+      timeout: 5s
+      cases:
+        - name: Health
+          path: /health
+          expected_status: 200
+          expected_code: 0
+        - name: Version
+          path: /api/v1/version
+          expected_status: 200
+          expected_code: 0
+        - name: Status
+          path: /api/v1/status
+          expected_status: 200
+          expected_code: 0
+        - name: Homepage
+          path: /
+          expected_status: 200
+          skip_on_404: false
+
+report:
+  suite_name: taichi-python-fastapi-buggy
+  output_dir: reports
+  formats: [json, junit, summary]
+
+autofix:
+  enabled: false
+  reports_dir: reports/errors

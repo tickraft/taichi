@@ -36,10 +36,8 @@ go.work.sum
 # AI Agent
 .trae/
 
-bin/
+bin/*
 coverage.out
 *.prof
-reports/*.json
-reports/*.xml
-reports/*.log
+reports/*
 !reports/.gitkeep

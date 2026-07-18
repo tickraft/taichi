@@ -1,0 +1,57 @@
+# taichi config for the frontend-vite-buggy example project.
+#
+# This project is a deliberately broken Vite frontend. It covers the
+# `frontend.vite` env type and exercises the ui / static skills.
+# The dev server starts on port 5174; most UI/static cases are expected to FAIL
+# because the page is missing expected HTML markers and static assets.
+
+projects:
+  - name: frontend-vite-buggy
+    root: .
+    env: vite-buggy
+    skills: [ui, static]
+
+envs:
+  vite-buggy:
+    kind: frontend.vite
+    command: npm run dev
+    cwd: .
+    ready_url: http://127.0.0.1:5174
+    port: 5174
+    healthy_timeout: 30s
+
+skills:
+  - name: ui
+    kind: ui
+    enabled: true
+    priority: 10
+    raw:
+      timeout: 5s
+      pages:
+        - path: /
+          contains: [<html, <div id="app"]
+          max_latency: 2s
+        - path: /about
+          contains: [<html]
+
+  - name: static
+    kind: static
+    enabled: true
+    priority: 20
+    raw:
+      timeout: 5s
+      pages:
+        - /
+        - /nonexistent-spa-route
+      assets:
+        - /favicon.ico
+        - /src/main.js
+
+report:
+  suite_name: taichi-frontend-vite-buggy
+  output_dir: reports
+  formats: [json, junit, summary]
+
+autofix:
+  enabled: false
+  reports_dir: reports/errors

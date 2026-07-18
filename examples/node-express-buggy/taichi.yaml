@@ -1,0 +1,137 @@
+# taichi config for the node-express-buggy example project.
+#
+# This project is a deliberately broken Node.js Express service. It covers the
+# `custom` env type (node binary startup) and exercises the api / ui / static /
+# regression skills. Most cases are expected to FAIL.
+#
+# Intentional bugs:
+#   - /health            returns 500 (expected 200)
+#   - /api/v1/orders     returns 500 (expected 200)
+#   - /api/v1/cart/1     returns total=30.00 (expected 60.00)
+#   - /                   missing <div id="app"> marker
+
+projects:
+  - name: node-express-buggy
+    root: .
+    env: express-buggy
+    skills: [api, ui, static, regression]
+
+envs:
+  express-buggy:
+    kind: custom
+    command: node src/server.js
+    cwd: .
+    ready_url: http://127.0.0.1:3000
+    healthy_timeout: 20s
+    env:
+      - NODE_ENV=test
+      - PORT=3000
+
+skills:
+  - name: api
+    kind: api
+    enabled: true
+    priority: 0
+    raw:
+      timeout: 5s
+      cases:
+        - name: Health
+          method: GET
+          path: /health
+          expected_status: 200
+          expected_code: 0
+          expected_field: data.status
+          expected_value: up
+          max_latency: 500ms
+        - name: OrdersList
+          method: GET
+          path: /api/v1/orders
+          expected_status: 200
+          expected_code: 0
+        - name: Cart1
+          method: GET
+          path: /api/v1/cart/1
+          expected_status: 200
+          expected_code: 0
+          expected_field: data.total
+          expected_value: 60.00
+        - name: Cart2
+          method: GET
+          path: /api/v1/cart/2
+          expected_status: 200
+          expected_code: 0
+          expected_field: data.total
+          expected_value: 45.00
+        - name: Status
+          method: GET
+          path: /api/v1/status
+          expected_status: 200
+          expected_code: 0
+          expected_field: data.version
+          expected_value: 0.1.0
+        - name: Metrics
+          method: GET
+          path: /api/v1/metrics
+          expected_status: 200
+          expected_code: 0
+          expected_field: data.errors
+          expected_value: 0
+
+  - name: ui
+    kind: ui
+    enabled: true
+    priority: 10
+    raw:
+      timeout: 5s
+      pages:
+        - path: /
+          contains: [<html, <div id="app"]
+          max_latency: 2s
+        - path: /api/v1/status
+          contains: [version]
+
+  - name: static
+    kind: static
+    enabled: true
+    priority: 20
+    raw:
+      timeout: 5s
+      pages:
+        - /
+        - /nonexistent-spa-route
+      assets:
+        - /favicon.ico
+        - /assets/app.js
+
+  - name: regression
+    kind: regression
+    enabled: true
+    priority: 30
+    raw:
+      timeout: 5s
+      cases:
+        - name: Health
+          path: /health
+          expected_status: 200
+          expected_code: 0
+        - name: Status
+          path: /api/v1/status
+          expected_status: 200
+          expected_code: 0
+        - name: Metrics
+          path: /api/v1/metrics
+          expected_status: 200
+          expected_code: 0
+        - name: Homepage
+          path: /
+          expected_status: 200
+          skip_on_404: false
+
+report:
+  suite_name: taichi-node-express-buggy
+  output_dir: reports
+  formats: [json, junit, summary]
+
+autofix:
+  enabled: false
+  reports_dir: reports/errors

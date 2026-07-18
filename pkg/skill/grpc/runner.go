@@ -115,7 +115,7 @@ func (s *Skill) runHealth(ctx *skill.Context, c grpcCase, insecureConn bool) (st
 }
 
 // runDial verifies that a connection can be established to the target.
-func (s *Skill) runDial(ctx *skill.Context, c grpcCase, insecureConn bool) (string, error) {
+func (s *Skill) runDial(_ *skill.Context, c grpcCase, insecureConn bool) (string, error) {
 	conn, err := dial(c.Target, insecureConn, s.timeout)
 	if err != nil {
 		return "", fmt.Errorf("dial %s: %w", c.Target, err)

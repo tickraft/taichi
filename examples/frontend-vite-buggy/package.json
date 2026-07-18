@@ -1,0 +1,14 @@
+{
+  "name": "frontend-vite-buggy",
+  "version": "0.1.0",
+  "description": "Deliberately broken Vite frontend for taichi integration testing",
+  "private": true,
+  "scripts": {
+    "dev": "vite --port 5174 --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.2.0"
+  }
+}

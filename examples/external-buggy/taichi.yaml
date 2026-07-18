@@ -1,0 +1,121 @@
+# taichi config for the external-buggy example project.
+#
+# This project demonstrates the "external" env type (base_url only, taichi does
+# NOT start/stop the service). The service is provided as `server.py` and must
+# be started manually before running taichi:
+#
+#   Terminal 1:  ./start.sh
+#   Terminal 2:  taichi run -c taichi.yaml
+#
+# The service has intentional bugs for taichi to detect:
+#   - /api/v1/health   returns status="degraded" (expected "healthy")
+#   - /api/v1/users    returns HTTP 500 (expected 200)
+#   - /api/v1/metrics  returns code=500 (expected 0)
+#   - /                missing <div id="app"> marker
+
+projects:
+  - name: external-buggy
+    env: external-service
+    skills: [api, ui, static, regression]
+
+envs:
+  external-service:
+    kind: custom
+    base_url: http://127.0.0.1:18090
+
+skills:
+  - name: api
+    kind: api
+    enabled: true
+    priority: 0
+    raw:
+      timeout: 5s
+      cases:
+        - name: Health
+          method: GET
+          path: /api/v1/health
+          expected_status: 200
+          expected_code: 0
+          expected_field: data.status
+          expected_value: healthy
+          max_latency: 500ms
+        - name: UsersList
+          method: GET
+          path: /api/v1/users
+          expected_status: 200
+          expected_code: 0
+        - name: Version
+          method: GET
+          path: /api/v1/version
+          expected_status: 200
+          expected_code: 0
+          expected_field: data.version
+          expected_value: 1.0.0
+        - name: Metrics
+          method: GET
+          path: /api/v1/metrics
+          expected_status: 200
+          expected_code: 0
+        - name: Ready
+          method: GET
+          path: /api/v1/ready
+          expected_status: 200
+          expected_code: 0
+          expected_field: data.ready
+          expected_value: true
+
+  - name: ui
+    kind: ui
+    enabled: true
+    priority: 10
+    raw:
+      timeout: 5s
+      pages:
+        - path: /
+          contains: [<html, <div id="app"]
+          max_latency: 2s
+
+  - name: static
+    kind: static
+    enabled: true
+    priority: 20
+    raw:
+      timeout: 5s
+      pages:
+        - /
+      assets:
+        - /favicon.ico
+        - /assets/style.css
+
+  - name: regression
+    kind: regression
+    enabled: true
+    priority: 30
+    raw:
+      timeout: 5s
+      cases:
+        - name: Health
+          path: /api/v1/health
+          expected_status: 200
+          expected_code: 0
+        - name: Version
+          path: /api/v1/version
+          expected_status: 200
+          expected_code: 0
+        - name: Ready
+          path: /api/v1/ready
+          expected_status: 200
+          expected_code: 0
+        - name: Homepage
+          path: /
+          expected_status: 200
+          skip_on_404: false
+
+report:
+  suite_name: taichi-external-buggy
+  output_dir: reports
+  formats: [json, junit, summary]
+
+autofix:
+  enabled: false
+  reports_dir: reports/errors

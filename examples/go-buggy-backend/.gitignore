@@ -1,0 +1,8 @@
+# Binaries
+bin/
+
+# Reports
+reports/
+
+# Go workspace files (regenerated via `go mod tidy`)
+go.sum
