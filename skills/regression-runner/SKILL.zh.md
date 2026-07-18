@@ -82,7 +82,7 @@ taichi run -c configs/taichi.yaml --project tickraft --skill regression --timeou
 
 ## 六、输出格式
 
-回归测试结果与 `taichi-test-runner` 完全相同，详见 [`taichi-test-runner` 输出格式](../test-runner/SKILL.md#五输出格式)。
+回归测试结果与 `taichi-test-runner` 完全相同，详见 [`taichi-test-runner` 输出格式](../test-runner/SKILL.zh.md#五输出格式)。
 
 结构化结果（JSON）：
 

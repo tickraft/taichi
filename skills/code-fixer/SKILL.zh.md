@@ -35,7 +35,7 @@ Agent 通过 `agent.Invoker` 接口接收 `failure.Context` JSON：
 | **HTTPInvoker** | 通过 HTTP POST body 接收 `failure.Context` JSON，从响应体读取 `FixResult` JSON |
 | **文件路径** | 接收失败上下文文件路径（`reports/failures-round-N-<timestamp>.json`），由 Agent 自行读取 |
 
-`failure.Context` JSON 结构详见 [`taichi-failure-analyzer`](../failure-analyzer/SKILL.md#四失败上下文格式failurecontext-json)。
+`failure.Context` JSON 结构详见 [`taichi-failure-analyzer`](../failure-analyzer/SKILL.zh.md#四失败上下文格式failurecontext-json)。
 
 ## 四、修复模式
 
