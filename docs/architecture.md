@@ -17,7 +17,8 @@ Taichi is a **general-purpose automated test orchestration framework**. Core des
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                      cmd/taichi (CLI)                        │
-│         run / list / version subcommands + flag parsing      │
+│   run / list / validate / version / mcp / copilot           │
+│   subcommands + flag parsing                                 │
 └───────────────────────┬─────────────────────────────────────┘
                         │
                         ▼
@@ -42,9 +43,10 @@ Taichi is a **general-purpose automated test orchestration framework**. Core des
      │                         │
      │                         ▼
      │            ┌──────────────────────────┐
-     │            │  skills/ built-in skills │
-     │            │  api / grpc / ui /       │
-     │            │  static / regression     │
+     │            │ pkg/skill/builtin        │
+     │            │ builtin.Skills()         │
+     │            │ api / grpc / ui /        │
+     │            │ static / regression      │
      │            └──────────────────────────┘
      ▼
 ┌──────────────────┐
@@ -79,7 +81,7 @@ Provides the base capabilities for test orchestration, with no dependency on bus
 
 ### 3.3 pkg/skill — Skill Interface Contract
 
-Defines the `TestSkill` interface that all skills must implement, and the runtime context `SkillContext`:
+Defines the `TestSkill` interface that all skills must implement, and the runtime context `Context`:
 
 - Lifecycle: `Configure → Setup → Run → Teardown`
 - Priority: Critical(0) / High(10) / Normal(20) / Low(30)
@@ -91,7 +93,7 @@ Defines the `TestSkill` interface that all skills must implement, and the runtim
 Concurrency-safe skill registration, query, unregistration, config-based filtering and priority sorting:
 
 - `Register(s, overwrite)` / `Unregister(name)` / `Get(name)` / `List()`
-- `Select(configs)`: filters enabled skills by SkillConfig, sorts ascending by Priority
+- `Select(configs)`: filters enabled skills by `skill.Config`, sorts ascending by Priority
 
 ### 3.5 pkg/env — Environment Management
 
@@ -110,7 +112,7 @@ YAML config schema, loaded by viper, with five top-level structures:
 ```
 projects: []Project      # list of projects under test
 envs: map[string]Env     # environment definitions
-skills: []SkillConfig    # skill configs
+skills: []skill.Config   # skill configs
 report: Report            # report output
 autofix: Autofix          # auto-fix
 ```
@@ -135,7 +137,9 @@ Coordinates a 9-step flow for a complete test run:
 8. Execute skills sequentially (Configure → Setup → Run → Teardown, by priority)
 9. Generate report
 
-### 3.9 skills/ — Built-in Skills
+### 3.9 pkg/skill/* — Built-in Skills
+
+Built-in skill implementations live under `pkg/skill/{api,grpc,ui,static,regression}` and are aggregated by `pkg/skill/builtin.Skills()`. (The top-level `skills/` directory holds AI Agent `SKILL.md` capability files, not Go implementations.)
 
 | Skill | Kind | Priority | Verified Content |
 |-------|------|----------|------------------|
@@ -151,17 +155,20 @@ Coordinates a 9-step flow for a complete test run:
 |------------|---------|
 | `run` | Load config → register built-in skills → orchestrate execution → print summary → generate report |
 | `list` | Show project, environment, skill config, report and auto-fix config |
+| `validate` | Validate config file integrity (projects / envs / skills / uniqueness) without executing tests |
 | `version` | Print version, Go runtime, target platform |
+| `mcp` | Start the MCP Server (JSON-RPC over stdio), exposing taichi tools to AI Agents |
+| `copilot` | Run the test → fix → regression closed loop driven by an external AI Agent via the `agent.Invoker` interface |
 
 ## 4. Dependency Relationships
 
 ```
-cmd/taichi → orchestrator, skill, skills/*, config, registry
+cmd/taichi → orchestrator, skill, pkg/skill/*, config, registry
 orchestrator → config, env, framework, registry, report, skill, autofix
-skills/* → skill, framework
+pkg/skill/* → skill, framework
 env → config, framework
 report → framework
 autofix → (no external deps, ServiceRestarter is an interface)
 ```
 
-**Circular dependency avoidance**: `pkg/orchestrator` does not directly import `skills/*`; instead, `RegisterBuiltinSkills([]skill.TestSkill)` is called by `cmd/taichi` to pass in constructed skill instances. The canonical list of built-in skill instances is `builtin.BuiltinSkills()` in `pkg/skill/builtin` — the single source of truth shared by `cmd/taichi` (run/list/copilot) and `pkg/mcp` to avoid divergence.
+**Circular dependency avoidance**: `pkg/orchestrator` does not directly import `pkg/skill/*`; instead, `RegisterBuiltinSkills([]skill.TestSkill)` is called by `cmd/taichi` to pass in constructed skill instances. The canonical list of built-in skill instances is `builtin.Skills()` in `pkg/skill/builtin` — the single source of truth shared by `cmd/taichi` (run/list/copilot) and `pkg/mcp` to avoid divergence.

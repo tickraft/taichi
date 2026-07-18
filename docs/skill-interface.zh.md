@@ -8,23 +8,23 @@
 
 ```go
 type TestSkill interface {
-    // Name 返回技能唯一标识符，应与 SkillConfig.Name 一致。
+    // Name 返回技能唯一标识符，应与 Config.Name 一致。
     Name() string
     // Kind 返回技能大类。
     Kind() Kind
     // Configure 接收技能配置，技能应在此时解析 Raw 字段并初始化内部状态。
     // 返回 error 表示配置无效，技能将被禁用。
-    Configure(cfg SkillConfig) error
+    Configure(cfg Config) error
     // Priority 返回执行优先级。配置中显式设置时优先使用配置值。
     Priority() Priority
     // Setup 在 Run 之前执行，用于准备资源（如启动浏览器、加载用例集）。
-    Setup(ctx *SkillContext) error
+    Setup(ctx *Context) error
     // Run 是技能执行核心，将测试结果通过 ctx.Reporter.Record 上报。
     // 返回 error 表示技能级致命错误；用例级失败应通过 TestResult.Passed=false 表达。
-    Run(ctx *SkillContext) SkillResult
+    Run(ctx *Context) Result
     // Teardown 在 Run 之后（无论成功或失败）执行，用于释放资源。
     // 返回的 error 仅记录日志，不影响最终结果。
-    Teardown(ctx *SkillContext) error
+    Teardown(ctx *Context) error
 }
 ```
 
@@ -72,12 +72,12 @@ Teardown(ctx)      ← 资源释放（每次运行，即使 Run 失败）
 
 配置中 `priority` 字段非零时覆盖技能默认优先级。
 
-## 五、SkillConfig 配置视图
+## 五、Config 配置视图
 
 由 taichi 配置文件加载后注入技能：
 
 ```go
-type SkillConfig struct {
+type Config struct {
     Name     string         // 唯一标识符
     Kind     Kind           // 大类
     Enabled  bool           // 是否参与执行
@@ -88,12 +88,12 @@ type SkillConfig struct {
 
 `Raw` 字段是技能自由定义的配置 map，技能在 `Configure` 中用 `skill.GetString` / `GetInt` / `GetDuration` / `GetBool` 等辅助函数读取。
 
-## 六、SkillContext 运行态上下文
+## 六、Context 运行态上下文
 
 在 `Setup` / `Run` / `Teardown` 期间传递：
 
 ```go
-type SkillContext struct {
+type Context struct {
     Ctx         context.Context      // 生命周期控制，支持优雅取消
     ProjectName string               // 被测项目名
     BaseURL     string               // 被测服务基址
@@ -108,10 +108,10 @@ type SkillContext struct {
 
 **Extra 使用约定**：键名应加技能名前缀避免冲突，如 `"ui.screenshot_dir"`。
 
-## 七、SkillResult 产出
+## 七、Result 产出
 
 ```go
-type SkillResult struct {
+type Result struct {
     SkillName string
     Duration  time.Duration
     Summary   framework.TestSummary  // 该技能产出结果的聚合统计
@@ -120,7 +120,7 @@ type SkillResult struct {
 ```
 
 - 用例级失败：通过 `ctx.Reporter.Record(TestResult{Passed: false, ...})` 上报
-- 技能级致命错误：通过 `SkillResult.Error` 表达
+- 技能级致命错误：通过 `Result.Error` 表达
 
 ## 八、注册机制
 
@@ -167,8 +167,8 @@ selected, missing := reg.Select(configs) // 按配置筛选+优先级排序
 
 ```go
 type Hook interface {
-    BeforeAll(ctx *SkillContext) error  // 所有技能执行前
-    AfterAll(ctx *SkillContext) error   // 所有技能执行后
+    BeforeAll(ctx *Context) error  // 所有技能执行前
+    AfterAll(ctx *Context) error   // 所有技能执行后
 }
 ```
 

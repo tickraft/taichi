@@ -42,22 +42,33 @@ make build
 
 ```
 taichi/
-├── cmd/taichi/          # CLI entry (run / list / version)
+├── cmd/taichi/          # CLI entry (run / list / validate / version / mcp / copilot)
 ├── pkg/
 │   ├── framework/       # Test core: types, assertions, reports, service lifecycle
 │   ├── autofix/         # Auto-fix: error detection, fix rule engine
 │   ├── skill/           # Skill interface contract and context
+│   │   ├── api/         # API test skill implementation
+│   │   ├── grpc/        # gRPC smoke check skill (health / dial / reflect)
+│   │   ├── ui/          # UI / page test skill implementation
+│   │   ├── static/      # Static resource test skill implementation
+│   │   ├── regression/  # Regression test skill implementation
+│   │   ├── plugin/      # Third-party plugin skill loader (JSON-over-stdio)
+│   │   └── builtin/     # Canonical list of built-in skill instances (Skills())
 │   ├── registry/        # Skill registry (concurrency-safe)
-│   ├── env/             # Environment management (backend / frontend)
+│   ├── env/             # Environment management (backend / frontend / custom)
 │   ├── config/          # Config schema and loading
 │   ├── report/          # Report extension point and multi-format output
-│   └── orchestrator/    # Orchestration core
-├── skills/              # Built-in skill implementations
-│   ├── api/             # API test skill
-│   ├── grpc/            # gRPC smoke check skill (health / dial / reflect)
-│   ├── ui/              # UI / page test skill
-│   ├── static/          # Static resource test skill
-│   └── regression/      # Regression test skill
+│   ├── failure/         # Failure context contract (taichi ↔ AI Agent)
+│   ├── agent/           # AI Agent invoker interface (CLI / HTTP)
+│   ├── mcp/             # MCP Server (JSON-RPC over stdio)
+│   └── orchestrator/    # Orchestration core (incl. copilot loop)
+├── skills/              # AI Agent SKILL.md capability files (not Go code)
+│   ├── test-runner/
+│   ├── failure-analyzer/
+│   ├── code-fixer/
+│   ├── regression-runner/
+│   └── config-generator/
+├── sdks/                # Third-party plugin SDKs (Node / Python / Shell)
 ├── configs/             # Default config and templates
 └── docs/                # This documentation directory
 ```

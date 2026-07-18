@@ -6,7 +6,7 @@
 
 ## 1. Overview
 
-The integration between taichi and AI Agents is **bidirectional**, with the two directions complementing each other to form a fully automated closed loop of "test → analyze → fix → regression". The failure context (`FailureContext`) serves as the information exchange contract between both sides.
+The integration between taichi and AI Agents is **bidirectional**, with the two directions complementing each other to form a fully automated closed loop of "test → analyze → fix → regression". The failure context (`Context`) serves as the information exchange contract between both sides.
 
 ### Direction 1: taichi as MCP Server called by AI Agent (Agent-driven)
 
@@ -22,13 +22,13 @@ Taichi takes the lead, proactively calling the AI Agent via the `agent.Invoker` 
 
 - Applicable: CI / command-line scenarios where taichi should self-drive the "test-fix-regression" loop
 - Protocol: CLI (stdin/stdout JSON) or HTTP API
-- Information flow: taichi → Agent (pass `FailureContext`) → Agent returns `FixResult` → taichi applies and regresses
+- Information flow: taichi → Agent (pass `Context`) → Agent returns `FixResult` → taichi applies and regresses
 
 ### Failure Context: Information Exchange Contract
 
-Regardless of direction, taichi and the Agent use `FailureContext` JSON as the standard carrier for failure information, and `FixResult` JSON as the standard carrier for fix output. Both are defined in:
+Regardless of direction, taichi and the Agent use `Context` JSON as the standard carrier for failure information, and `FixResult` JSON as the standard carrier for fix output. Both are defined in:
 
-- `pkg/failure/failure.go`: `FailureContext` / `FailedCase`
+- `pkg/failure/failure.go`: `Context` / `FailedCase`
 - `pkg/agent/agent.go`: `FixResult` / `FixMode` / `Invoker` interface
 
 ## 2. Architecture Diagram
@@ -58,7 +58,7 @@ taichi run (test)
    │
    ├─ all pass ──► end (success)
    │
-   └─ has failures ──► generate FailureContext ──► Agent.AnalyzeAndFix
+   └─ has failures ──► generate failure context ──► Agent.AnalyzeAndFix
                                                     │
                                                     ▼
                                            apply FixResult
@@ -88,10 +88,10 @@ taichi mcp -c configs/taichi.yaml
 
 | Tool Name | Purpose | Key Parameters | Return Format |
 |-----------|---------|----------------|---------------|
-| `taichi_run` | Execute a test orchestration | `config`, `project`, `skill[]`, `timeout` | Test result summary (see 3.3) |
-| `taichi_list` | List projects, environments, and registered skills in config | `config` | Project/env/skill listing |
-| `taichi_failures` | Read the failure context of the most recent run | `config`, `project` | `FailureContext` JSON |
-| `taichi_regression` | Run regression tests (only the `regression` skill) | `config`, `project`, `timeout` | Test result summary |
+| `taichi_run` | Execute a test orchestration | `config_path`, `project`, `skills`, `timeout` | Test result summary (see 3.3) |
+| `taichi_list` | List projects, environments, and registered skills in config | `config_path` | Project/env/skill listing |
+| `taichi_failures` | Read the failure context of the most recent run | `config_path`, `reports_dir` | `Context` JSON |
+| `taichi_regression` | Run regression tests (only the `regression` skill) | `config_path`, `project`, `timeout` | Test result summary |
 
 ### 3.3 Tool Parameters and Return Formats
 
@@ -101,9 +101,9 @@ Request parameters:
 
 ```json
 {
-  "config": "configs/taichi.yaml",
+  "config_path": "configs/taichi.yaml",
   "project": "tickraft",
-  "skill": ["api", "ui"],
+  "skills": ["api", "ui"],
   "timeout": "30m"
 }
 ```
@@ -112,7 +112,7 @@ Return (test result summary):
 
 ```json
 {
-  "project_name": "tickraft",
+  "project": "tickraft",
   "base_url": "http://127.0.0.1:8080",
   "duration": "12.34s",
   "summary": {
@@ -121,9 +121,10 @@ Return (test result summary):
     "failed": 2,
     "skipped": 0
   },
+  "env_log": "/tmp/taichi-tickraft-env.log",
   "skill_results": [
     {
-      "skill_name": "api",
+      "skill": "api",
       "duration": "3.21s",
       "summary": { "total": 10, "passed": 10, "failed": 0, "skipped": 0 },
       "error": null
@@ -137,7 +138,7 @@ Return (test result summary):
 Request parameters:
 
 ```json
-{ "config": "configs/taichi.yaml" }
+{ "config_path": "configs/taichi.yaml" }
 ```
 
 Returns a listing of projects, environments, and registered skills (name, type, enabled status, priority).
@@ -147,10 +148,10 @@ Returns a listing of projects, environments, and registered skills (name, type, 
 Request parameters:
 
 ```json
-{ "config": "configs/taichi.yaml", "project": "tickraft" }
+{ "config_path": "configs/taichi.yaml", "reports_dir": "reports" }
 ```
 
-Returns the `FailureContext` JSON of the most recent run (structure in [Section 7](#7-failure-context-format)). Returns an empty object if no failures.
+Returns the `Context` JSON of the most recent run (structure in [Section 7](#7-failure-context-format)). Returns an empty object if no failures.
 
 #### taichi_regression
 
@@ -158,7 +159,7 @@ Request parameters:
 
 ```json
 {
-  "config": "configs/taichi.yaml",
+  "config_path": "configs/taichi.yaml",
   "project": "tickraft",
   "timeout": "15m"
 }
@@ -183,8 +184,8 @@ taichi copilot -c configs/taichi.yaml \
 
 1. **Test**: Execute a complete test orchestration (equivalent to `taichi run`)
 2. **Failure determination**: If all pass, return success directly; if there are failures, enter the fix loop
-3. **Build failure context**: Encapsulate failed cases into `FailureContext`, written to `reports/failures-round-<N>-<timestamp>.json`
-4. **Call Agent**: Pass `FailureContext` to the AI Agent via `agent.Invoker` for analysis and fix
+3. **Build failure context**: Encapsulate failed cases into `Context`, written to `reports/failures-round-<N>-<timestamp>.json`
+4. **Call Agent**: Pass `Context` to the AI Agent via `agent.Invoker` for analysis and fix
 5. **Apply fix**:
    - `patch` mode: `git apply` the unified diff generated by the Agent
    - `direct` mode: verify that the files modified by the Agent exist and are readable
@@ -218,7 +219,7 @@ Taichi abstracts AI Agent invocation via the `agent.Invoker` interface, with two
 // defined in pkg/agent/agent.go
 type Invoker interface {
     // AnalyzeAndFix analyzes the failure context and returns a fix result.
-    AnalyzeAndFix(ctx context.Context, fc *failure.FailureContext) (*FixResult, error)
+    AnalyzeAndFix(ctx context.Context, fc *failure.Context) (*FixResult, error)
     // Name returns a human-readable name for the invoker.
     Name() string
 }
@@ -226,7 +227,7 @@ type Invoker interface {
 
 ### 5.2 CLIInvoker: Command-line Invocation
 
-Invokes the AI Agent via subprocess. The Agent script must **read `FailureContext` JSON from stdin and output `FixResult` JSON to stdout**.
+Invokes the AI Agent via subprocess. The Agent script must **read `Context` JSON from stdin and output `FixResult` JSON to stdout**.
 
 ```go
 invoker := &agent.CLIInvoker{
@@ -238,7 +239,7 @@ invoker := &agent.CLIInvoker{
 ```
 
 Contract:
-- stdin: `FailureContext` JSON (compact format)
+- stdin: `Context` JSON (compact format)
 - stdout: `FixResult` JSON (compact format)
 - stderr: Agent free output (taichi only logs on error)
 - exit code: non-zero is treated as call failure
@@ -257,7 +258,7 @@ invoker := &agent.HTTPInvoker{
 ```
 
 Contract:
-- Request: `POST <Endpoint>`, `Content-Type: application/json`, body is `FailureContext` JSON
+- Request: `POST <Endpoint>`, `Content-Type: application/json`, body is `Context` JSON
 - Auth: if `Token` is non-empty, append `Authorization: Bearer <Token>` header
 - Response: HTTP 200, body is `FixResult` JSON; non-200 is treated as failure
 
@@ -270,7 +271,7 @@ type MyInvoker struct{}
 
 func (m *MyInvoker) Name() string { return "my-agent" }
 
-func (m *MyInvoker) AnalyzeAndFix(ctx context.Context, fc *failure.FailureContext) (*agent.FixResult, error) {
+func (m *MyInvoker) AnalyzeAndFix(ctx context.Context, fc *failure.Context) (*agent.FixResult, error) {
     // 1. serialize fc and send to self-hosted Agent service
     // 2. wait for Agent analysis and fix
     // 3. parse response and construct FixResult
@@ -342,7 +343,7 @@ The Agent directly modifies source files via file editing tools; taichi only ver
 
 ## 7. Failure Context Format
 
-`FailureContext` is the information exchange contract between taichi ↔ AI Agent, defined in [`pkg/failure/failure.go`](../pkg/failure/failure.go).
+`Context` is the information exchange contract between taichi ↔ AI Agent, defined in [`pkg/failure/failure.go`](../pkg/failure/failure.go).
 
 ### 7.1 JSON Structure
 
@@ -391,7 +392,7 @@ The Agent directly modifies source files via file editing tools; taichi only ver
 
 - **Generation**: When tests have failures, taichi builds from the test result snapshot via `failure.FromResults`, written to `reports/failures-round-<N>-<timestamp>.json` via `WriteToFile`
 - **Consumption**: Agent reads via file path, or receives via `CLIInvoker` stdin / `HTTPInvoker` body
-- **Serializable**: `FailureContext` implements JSON serialization/deserialization; `ReadFromFile` can restore from a file
+- **Serializable**: `Context` implements JSON serialization/deserialization; `ReadFromFile` can restore from a file
 
 ## 8. Skill File Index
 

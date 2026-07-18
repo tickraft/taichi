@@ -1,6 +1,6 @@
 ---
 name: "taichi-code-fixer"
-description: "根据失败分析结果修复项目源码。当 AI Agent 完成根因分析后需要生成代码修复、用户请求修复测试失败、或在 copilot 中需要产出 FixResult 供 taichi 应用时调用。输入为 FailureContext JSON（通过 stdin 或文件路径），输出为 FixResult JSON（patch 或 direct 模式）。"
+description: "根据失败分析结果修复项目源码。当 AI Agent 完成根因分析后需要生成代码修复、用户请求修复测试失败、或在 copilot 中需要产出 FixResult 供 taichi 应用时调用。输入为 failure.Context JSON（通过 stdin 或文件路径），输出为 FixResult JSON（patch 或 direct 模式）。"
 ---
 
 > 🌐 语言: [English](SKILL.md) | [中文](SKILL.zh.md)
@@ -9,7 +9,7 @@ description: "根据失败分析结果修复项目源码。当 AI Agent 完成�
 
 ## 一、简介
 
-本 Skill 用于让 AI Agent 根据 taichi 的失败上下文（`FailureContext`）分析失败原因并产出代码修复。taichi 通过 `agent.Invoker` 接口将失败上下文交给 Agent，Agent 返回 `FixResult`，taichi 再应用修复（patch 模式经 `git apply`，direct 模式仅校验）。
+本 Skill 用于让 AI Agent 根据 taichi 的失败上下文（`failure.Context`，下文简称 `Context`）分析失败原因并产出代码修复。taichi 通过 `agent.Invoker` 接口将失败上下文交给 Agent，Agent 返回 `FixResult`，taichi 再应用修复（patch 模式经 `git apply`，direct 模式仅校验）。
 
 本 Skill 是 taichi ↔ AI Agent 双向集成闭环中的「修复」环节，承接 `taichi-failure-analyzer` 的根因分析，产出供 `taichi-regression-runner` 验证的修复。
 
@@ -27,15 +27,15 @@ description: "根据失败分析结果修复项目源码。当 AI Agent 完成�
 
 ## 三、输入参数
 
-Agent 通过 `agent.Invoker` 接口接收 `FailureContext` JSON：
+Agent 通过 `agent.Invoker` 接口接收 `failure.Context` JSON：
 
 | 传递方式 | 说明 |
 |---------|------|
-| **CLIInvoker** | 通过 stdin 接收 `FailureContext` JSON，向 stdout 输出 `FixResult` JSON |
-| **HTTPInvoker** | 通过 HTTP POST body 接收 `FailureContext` JSON，从响应体读取 `FixResult` JSON |
+| **CLIInvoker** | 通过 stdin 接收 `failure.Context` JSON，向 stdout 输出 `FixResult` JSON |
+| **HTTPInvoker** | 通过 HTTP POST body 接收 `failure.Context` JSON，从响应体读取 `FixResult` JSON |
 | **文件路径** | 接收失败上下文文件路径（`reports/failures-round-N-<timestamp>.json`），由 Agent 自行读取 |
 
-`FailureContext` JSON 结构详见 [`taichi-failure-analyzer`](../failure-analyzer/SKILL.md#四失败上下文格式failurecontext-json)。
+`failure.Context` JSON 结构详见 [`taichi-failure-analyzer`](../failure-analyzer/SKILL.md#四失败上下文格式failurecontext-json)。
 
 ## 四、修复模式
 

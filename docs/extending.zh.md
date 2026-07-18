@@ -33,7 +33,7 @@ import (
 
 // Skill 是 gRPC 测试技能。
 type Skill struct {
-    cfg    skill.SkillConfig
+    cfg    skill.Config
     cases  []grpcCase
     timeout time.Duration
 }
@@ -54,7 +54,7 @@ func (s *Skill) Kind() skill.Kind { return skill.KindCustom }
 func (s *Skill) Priority() skill.Priority { return skill.PriorityNormal }
 
 // Configure 解析 raw 配置。
-func (s *Skill) Configure(cfg skill.SkillConfig) error {
+func (s *Skill) Configure(cfg skill.Config) error {
     s.cfg = cfg
     s.timeout = skill.GetDuration(cfg.Raw, "timeout", skill.DefaultHTTPTimeout)
     // 解析 cases...
@@ -62,12 +62,12 @@ func (s *Skill) Configure(cfg skill.SkillConfig) error {
 }
 
 // Setup 准备资源（如建立 gRPC 连接）。
-func (s *Skill) Setup(ctx *skill.SkillContext) error {
+func (s *Skill) Setup(ctx *skill.Context) error {
     return nil
 }
 
 // Run 执行测试，结果通过 ctx.Reporter.Record 上报。
-func (s *Skill) Run(ctx *skill.SkillContext) skill.SkillResult {
+func (s *Skill) Run(ctx *skill.Context) skill.Result {
     start := time.Now()
     for _, c := range s.cases {
         caseStart := time.Now()
@@ -76,7 +76,7 @@ func (s *Skill) Run(ctx *skill.SkillContext) skill.SkillResult {
         msg := "ok"
         skill.RecordResult(ctx.Reporter, "grpc:"+c.Service, caseStart, passed, msg, nil)
     }
-    return skill.SkillResult{
+    return skill.Result{
         SkillName: s.Name(),
         Duration:  time.Since(start),
         Summary:   ctx.Reporter.Summary(),
@@ -84,7 +84,7 @@ func (s *Skill) Run(ctx *skill.SkillContext) skill.SkillResult {
 }
 
 // Teardown 释放资源。
-func (s *Skill) Teardown(ctx *skill.SkillContext) error {
+func (s *Skill) Teardown(ctx *skill.Context) error {
     return nil
 }
 ```
@@ -93,16 +93,17 @@ func (s *Skill) Teardown(ctx *skill.SkillContext) error {
 
 #### 方式一：编译到 taichi 二进制
 
-在 `cmd/taichi/run.go` 的 `builtinSkills()` 中追加：
+在 `pkg/skill/builtin/builtin.go` 的 `Skills()` 中追加（`cmd/taichi` 与 `pkg/mcp` 共用的唯一来源）：
 
 ```go
-func builtinSkills() []skill.TestSkill {
+func Skills() []skill.TestSkill {
     return []skill.TestSkill{
         &api.Skill{},
+        &grpc.Skill{},
         &ui.Skill{},
         &static.Skill{},
         &regression.Skill{},
-        &grpc.Skill{},  // 新增
+        &mySkill.Skill{},  // 新增
     }
 }
 ```
@@ -111,9 +112,9 @@ func builtinSkills() []skill.TestSkill {
 
 ```go
 o := orchestrator.New()
-o.RegisterBuiltinSkills(builtinSkills())
+o.RegisterBuiltinSkills(builtin.Skills())
 // 动态注册自定义技能
-o.Registry().Register(&grpc.Skill{}, true)
+o.Registry().Register(&mySkill.Skill{}, true)
 ```
 
 #### 方式三：通过注册中心卸载
@@ -312,12 +313,12 @@ func (DBReconnectRule) Apply(ctx *autofix.FixContext) autofix.FixResult {
 实现 `skill.Hook` 接口获得全局生命周期通知：
 
 ```go
-func (s *MySkill) BeforeAll(ctx *skill.SkillContext) error {
+func (s *MySkill) BeforeAll(ctx *skill.Context) error {
     // 所有技能执行前：初始化共享资源
     return nil
 }
 
-func (s *MySkill) AfterAll(ctx *skill.SkillContext) error {
+func (s *MySkill) AfterAll(ctx *skill.Context) error {
     // 所有技能执行后：清理共享资源
     return nil
 }

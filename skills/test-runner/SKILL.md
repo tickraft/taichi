@@ -150,7 +150,7 @@ The result is also written as a JSON file to `reports/<project>-<timestamp>.json
 
 ## 6. Handoff with Failure Context
 
-When `summary.failed > 0`, taichi generates a `FailureContext` JSON file in the `reports/` directory (named like `failures-round-1-<timestamp>.json`) for `taichi-failure-analyzer` to consume. After the test finishes, the Agent should check the exit code and `summary.failed`:
+When `summary.failed > 0`, taichi generates a `failure.Context` JSON file in the `reports/` directory (named like `failures-round-1-<timestamp>.json`) for `taichi-failure-analyzer` to consume. After the test finishes, the Agent should check the exit code and `summary.failed`:
 
 - `failed == 0`: Tests passed; no further action needed
 - `failed > 0`: Call `taichi-failure-analyzer` to read the failure context for analysis

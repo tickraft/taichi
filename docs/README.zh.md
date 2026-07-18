@@ -42,22 +42,33 @@ make build
 
 ```
 taichi/
-├── cmd/taichi/          # CLI 入口（run / list / version）
+├── cmd/taichi/          # CLI 入口（run / list / validate / version / mcp / copilot）
 ├── pkg/
 │   ├── framework/       # 测试核心：类型、断言、报告、服务生命周期
 │   ├── autofix/         # 自动修复：错误检测、修复规则引擎
 │   ├── skill/           # 技能接口契约与上下文
+│   │   ├── api/         # API 测试技能实现
+│   │   ├── grpc/        # gRPC 冒烟检查技能（health / dial / reflect）
+│   │   ├── ui/          # UI / 页面测试技能实现
+│   │   ├── static/      # 静态资源测试技能实现
+│   │   ├── regression/  # 回归测试技能实现
+│   │   ├── plugin/      # 第三方插件技能加载器（JSON-over-stdio）
+│   │   └── builtin/     # 内置技能实例的权威列表（Skills()）
 │   ├── registry/        # 技能注册中心（并发安全）
-│   ├── env/             # 环境管理（后端 / 前端）
+│   ├── env/             # 环境管理（后端 / 前端 / 自定义）
 │   ├── config/          # 配置 schema 与加载
 │   ├── report/          # 报告扩展点与多格式输出
-│   └── orchestrator/    # 编排核心
-├── skills/              # 内置技能实现
-│   ├── api/             # API 测试技能
-│   ├── grpc/            # gRPC 冒烟检查技能（health / dial / reflect）
-│   ├── ui/              # UI / 页面测试技能
-│   ├── static/          # 静态资源测试技能
-│   └── regression/      # 回归测试技能
+│   ├── failure/         # 失败上下文契约（taichi ↔ AI Agent）
+│   ├── agent/           # AI Agent 调用方接口（CLI / HTTP）
+│   ├── mcp/             # MCP Server（基于 stdio 的 JSON-RPC）
+│   └── orchestrator/    # 编排核心（含 copilot 闭环）
+├── skills/              # AI Agent SKILL.md 能力描述文件（非 Go 代码）
+│   ├── test-runner/
+│   ├── failure-analyzer/
+│   ├── code-fixer/
+│   ├── regression-runner/
+│   └── config-generator/
+├── sdks/                # 第三方插件 SDK（Node / Python / Shell）
 ├── configs/             # 默认配置与模板
 └── docs/                # 本文档目录
 ```

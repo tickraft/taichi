@@ -8,26 +8,26 @@ All test skills must implement the `pkg/skill.TestSkill` interface:
 
 ```go
 type TestSkill interface {
-    // Name returns the unique skill identifier, should match SkillConfig.Name.
+    // Name returns the unique skill identifier, should match Config.Name.
     Name() string
     // Kind returns the skill category.
     Kind() Kind
     // Configure receives the skill config; the skill should parse the Raw field
     // and initialize internal state at this point.
     // Returning an error indicates invalid config; the skill will be disabled.
-    Configure(cfg SkillConfig) error
+    Configure(cfg Config) error
     // Priority returns the execution priority. When explicitly set in config,
     // the config value takes precedence.
     Priority() Priority
     // Setup runs before Run, used to prepare resources (e.g. start browser, load case set).
-    Setup(ctx *SkillContext) error
+    Setup(ctx *Context) error
     // Run is the skill execution core; reports test results via ctx.Reporter.Record.
     // Returning an error indicates a skill-level fatal error; case-level failures
     // should be expressed via TestResult.Passed=false.
-    Run(ctx *SkillContext) SkillResult
+    Run(ctx *Context) Result
     // Teardown runs after Run (whether success or failure), used to release resources.
     // The returned error is only logged and does not affect the final result.
-    Teardown(ctx *SkillContext) error
+    Teardown(ctx *Context) error
 }
 ```
 
@@ -75,12 +75,12 @@ Lower numbers run first. Within a project, skills execute in ascending priority 
 
 When the `priority` field in config is non-zero, it overrides the skill's default priority.
 
-## 5. SkillConfig View
+## 5. Config View
 
 Injected into the skill after being loaded from the taichi config file:
 
 ```go
-type SkillConfig struct {
+type Config struct {
     Name     string         // unique identifier
     Kind     Kind           // category
     Enabled  bool           // whether to participate in execution
@@ -91,12 +91,12 @@ type SkillConfig struct {
 
 The `Raw` field is a config map freely defined by the skill; the skill reads it in `Configure` using helper functions like `skill.GetString` / `GetInt` / `GetDuration` / `GetBool`.
 
-## 6. SkillContext Runtime Context
+## 6. Context Runtime Context
 
 Passed during `Setup` / `Run` / `Teardown`:
 
 ```go
-type SkillContext struct {
+type Context struct {
     Ctx         context.Context      // lifecycle control, supports graceful cancellation
     ProjectName string               // project under test name
     BaseURL     string               // service under test base URL
@@ -111,10 +111,10 @@ type SkillContext struct {
 
 **Extra usage convention**: keys should be prefixed with the skill name to avoid conflicts, e.g. `"ui.screenshot_dir"`.
 
-## 7. SkillResult Output
+## 7. Result Output
 
 ```go
-type SkillResult struct {
+type Result struct {
     SkillName string
     Duration  time.Duration
     Summary   framework.TestSummary  // aggregate statistics of the skill's results
@@ -123,7 +123,7 @@ type SkillResult struct {
 ```
 
 - Case-level failure: reported via `ctx.Reporter.Record(TestResult{Passed: false, ...})`
-- Skill-level fatal error: expressed via `SkillResult.Error`
+- Skill-level fatal error: expressed via `Result.Error`
 
 ## 8. Registration Mechanism
 
@@ -170,8 +170,8 @@ Implement the `Hook` interface for finer-grained lifecycle notifications:
 
 ```go
 type Hook interface {
-    BeforeAll(ctx *SkillContext) error  // before all skills execute
-    AfterAll(ctx *SkillContext) error   // after all skills execute
+    BeforeAll(ctx *Context) error  // before all skills execute
+    AfterAll(ctx *Context) error   // after all skills execute
 }
 ```
 

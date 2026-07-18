@@ -33,7 +33,7 @@ import (
 
 // Skill is the gRPC test skill.
 type Skill struct {
-    cfg    skill.SkillConfig
+    cfg    skill.Config
     cases  []grpcCase
     timeout time.Duration
 }
@@ -54,7 +54,7 @@ func (s *Skill) Kind() skill.Kind { return skill.KindCustom }
 func (s *Skill) Priority() skill.Priority { return skill.PriorityNormal }
 
 // Configure parses the raw config.
-func (s *Skill) Configure(cfg skill.SkillConfig) error {
+func (s *Skill) Configure(cfg skill.Config) error {
     s.cfg = cfg
     s.timeout = skill.GetDuration(cfg.Raw, "timeout", skill.DefaultHTTPTimeout)
     // parse cases...
@@ -62,12 +62,12 @@ func (s *Skill) Configure(cfg skill.SkillConfig) error {
 }
 
 // Setup prepares resources (e.g. establish gRPC connection).
-func (s *Skill) Setup(ctx *skill.SkillContext) error {
+func (s *Skill) Setup(ctx *skill.Context) error {
     return nil
 }
 
 // Run executes the test; results are reported via ctx.Reporter.Record.
-func (s *Skill) Run(ctx *skill.SkillContext) skill.SkillResult {
+func (s *Skill) Run(ctx *skill.Context) skill.Result {
     start := time.Now()
     for _, c := range s.cases {
         caseStart := time.Now()
@@ -76,7 +76,7 @@ func (s *Skill) Run(ctx *skill.SkillContext) skill.SkillResult {
         msg := "ok"
         skill.RecordResult(ctx.Reporter, "grpc:"+c.Service, caseStart, passed, msg, nil)
     }
-    return skill.SkillResult{
+    return skill.Result{
         SkillName: s.Name(),
         Duration:  time.Since(start),
         Summary:   ctx.Reporter.Summary(),
@@ -84,7 +84,7 @@ func (s *Skill) Run(ctx *skill.SkillContext) skill.SkillResult {
 }
 
 // Teardown releases resources.
-func (s *Skill) Teardown(ctx *skill.SkillContext) error {
+func (s *Skill) Teardown(ctx *skill.Context) error {
     return nil
 }
 ```
@@ -93,16 +93,17 @@ func (s *Skill) Teardown(ctx *skill.SkillContext) error {
 
 #### Option 1: Compile into the taichi binary
 
-Append to `builtinSkills()` in `cmd/taichi/run.go`:
+Append to `Skills()` in `pkg/skill/builtin/builtin.go` (the single source of truth shared by `cmd/taichi` and `pkg/mcp`):
 
 ```go
-func builtinSkills() []skill.TestSkill {
+func Skills() []skill.TestSkill {
     return []skill.TestSkill{
         &api.Skill{},
+        &grpc.Skill{},
         &ui.Skill{},
         &static.Skill{},
         &regression.Skill{},
-        &grpc.Skill{},  // new
+        &mySkill.Skill{},  // new
     }
 }
 ```
@@ -111,9 +112,9 @@ func builtinSkills() []skill.TestSkill {
 
 ```go
 o := orchestrator.New()
-o.RegisterBuiltinSkills(builtinSkills())
+o.RegisterBuiltinSkills(builtin.Skills())
 // dynamically register a custom skill
-o.Registry().Register(&grpc.Skill{}, true)
+o.Registry().Register(&mySkill.Skill{}, true)
 ```
 
 #### Option 3: Unregister via the registry
@@ -312,12 +313,12 @@ Rules match in registration order; the first rule whose `Match` returns true win
 Implement the `skill.Hook` interface to receive global lifecycle notifications:
 
 ```go
-func (s *MySkill) BeforeAll(ctx *skill.SkillContext) error {
+func (s *MySkill) BeforeAll(ctx *skill.Context) error {
     // before all skills execute: initialize shared resources
     return nil
 }
 
-func (s *MySkill) AfterAll(ctx *skill.SkillContext) error {
+func (s *MySkill) AfterAll(ctx *skill.Context) error {
     // after all skills execute: clean up shared resources
     return nil
 }

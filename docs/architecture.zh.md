@@ -17,7 +17,8 @@ taichi 是一个**通用的自动化测试编排框架**。核心设计目标：
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                      cmd/taichi (CLI)                        │
-│         run / list / version 子命令 + flag 解析              │
+│   run / list / validate / version / mcp / copilot           │
+│   子命令 + flag 解析                                         │
 └───────────────────────┬─────────────────────────────────────┘
                         │
                         ▼
@@ -41,9 +42,10 @@ taichi 是一个**通用的自动化测试编排框架**。核心设计目标：
      │                         │
      │                         ▼
      │            ┌──────────────────────────┐
-     │            │  skills/ 内置技能实现     │
-     │            │  api / grpc / ui /       │
-     │            │  static / regression     │
+     │            │ pkg/skill/builtin        │
+     │            │ builtin.Skills()         │
+     │            │ api / grpc / ui /        │
+     │            │ static / regression      │
      │            └──────────────────────────┘
      ▼
 ┌──────────────────┐
@@ -78,7 +80,7 @@ taichi 是一个**通用的自动化测试编排框架**。核心设计目标：
 
 ### 3.3 pkg/skill — 技能接口契约
 
-定义所有技能必须实现的 `TestSkill` 接口与运行态上下文 `SkillContext`：
+定义所有技能必须实现的 `TestSkill` 接口与运行态上下文 `Context`：
 
 - 生命周期：`Configure → Setup → Run → Teardown`
 - 优先级：Critical(0) / High(10) / Normal(20) / Low(30)
@@ -90,7 +92,7 @@ taichi 是一个**通用的自动化测试编排框架**。核心设计目标：
 并发安全的技能注册、查询、卸载、按配置筛选与优先级排序：
 
 - `Register(s, overwrite)` / `Unregister(name)` / `Get(name)` / `List()`
-- `Select(configs)`：按 SkillConfig 筛选启用的技能，按 Priority 升序排序
+- `Select(configs)`：按 `skill.Config` 筛选启用的技能，按 Priority 升序排序
 
 ### 3.5 pkg/env — 环境管理
 
@@ -109,7 +111,7 @@ YAML 配置 schema，viper 加载，含五大顶层结构：
 ```
 projects: []Project      # 被测项目列表
 envs: map[string]Env     # 环境定义
-skills: []SkillConfig    # 技能配置
+skills: []skill.Config   # 技能配置
 report: Report            # 报告输出
 autofix: Autofix          # 自动修复
 ```
@@ -134,7 +136,9 @@ autofix: Autofix          # 自动修复
 8. 依次执行技能（Configure → Setup → Run → Teardown，按优先级）
 9. 生成报告
 
-### 3.9 skills/ — 内置技能
+### 3.9 pkg/skill/* — 内置技能
+
+内置技能实现位于 `pkg/skill/{api,grpc,ui,static,regression}`，由 `pkg/skill/builtin.Skills()` 聚合。（顶层 `skills/` 目录存放 AI Agent 的 `SKILL.md` 能力描述文件，并非 Go 实现。）
 
 | 技能 | Kind | 优先级 | 验证内容 |
 |------|------|--------|---------|
@@ -150,17 +154,20 @@ autofix: Autofix          # 自动修复
 |--------|------|
 | `run` | 加载配置 → 注册内置技能 → 编排执行 → 打印摘要 → 生成报告 |
 | `list` | 展示项目、环境、技能配置、报告与自动修复配置 |
+| `validate` | 校验配置文件完整性（projects / envs / skills / 唯一性），不执行测试 |
 | `version` | 打印版本、Go 运行时、目标平台 |
+| `mcp` | 启动 MCP Server（基于 stdio 的 JSON-RPC），向 AI Agent 暴露 taichi 工具 |
+| `copilot` | 在外部 AI Agent（通过 `agent.Invoker` 接口）驱动下运行 测试 → 修复 → 回归 闭环 |
 
 ## 四、依赖关系
 
 ```
-cmd/taichi → orchestrator, skill, skills/*, config, registry
+cmd/taichi → orchestrator, skill, pkg/skill/*, config, registry
 orchestrator → config, env, framework, registry, report, skill, autofix
-skills/* → skill, framework
+pkg/skill/* → skill, framework
 env → config, framework
 report → framework
 autofix → (无外部依赖，ServiceRestarter 为接口)
 ```
 
-**循环依赖规避**：`pkg/orchestrator` 不直接 import `skills/*`，而是通过 `RegisterBuiltinSkills([]skill.TestSkill)` 由 `cmd/taichi` 传入已构造的技能实例。内置技能实例的权威列表为 `pkg/skill/builtin` 中的 `builtin.BuiltinSkills()` —— 是 `cmd/taichi`（run/list/copilot）与 `pkg/mcp` 共用的唯一来源，避免列表漂移。
+**循环依赖规避**：`pkg/orchestrator` 不直接 import `pkg/skill/*`，而是通过 `RegisterBuiltinSkills([]skill.TestSkill)` 由 `cmd/taichi` 传入已构造的技能实例。内置技能实例的权威列表为 `pkg/skill/builtin` 中的 `builtin.Skills()` —— 是 `cmd/taichi`（run/list/copilot）与 `pkg/mcp` 共用的唯一来源，避免列表漂移。

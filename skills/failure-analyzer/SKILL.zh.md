@@ -9,7 +9,7 @@ description: "读取 taichi 生成的失败上下文，分析测试失败根因�
 
 ## 一、简介
 
-本 Skill 用于让 AI Agent 读取 taichi 在测试失败后生成的结构化失败上下文（`FailureContext`），结合服务日志与项目源码，分析失败根因，产出可执行的根因分析报告。
+本 Skill 用于让 AI Agent 读取 taichi 在测试失败后生成的结构化失败上下文（`failure.Context`，下文简称 `Context`），结合服务日志与项目源码，分析失败根因，产出可执行的根因分析报告。
 
 本 Skill 是 taichi ↔ AI Agent 双向集成闭环中的「根因分析」环节，承接 `taichi-test-runner` 产出的失败上下文，为 `taichi-code-fixer` 提供修复依据。
 
@@ -32,7 +32,7 @@ description: "读取 taichi 生成的失败上下文，分析测试失败根因�
 |------|------|------|------|
 | `failure_context_path` | string | 是 | 失败上下文 JSON 文件路径，由 taichi 在测试失败后生成到 `reports/` 目录，命名形如 `failures-round-1-<timestamp>.json` |
 
-## 四、失败上下文格式（FailureContext JSON）
+## 四、失败上下文格式（failure.Context JSON）
 
 taichi 在测试存在失败用例时，将结构化失败上下文写入 `reports/` 目录，作为 taichi ↔ AI Agent 的信息交换契约。完整结构如下：
 
@@ -86,7 +86,7 @@ taichi 在测试存在失败用例时，将结构化失败上下文写入 `repor
 ### Step 1：读取失败上下文
 
 ```
-读取 failure_context_path → 解析 FailureContext JSON
+读取 failure_context_path → 解析 failure.Context JSON
                           → 提取 project_name / project_root / env_log_path
                           → 遍历 failed_cases 获取每个失败用例的 name / message / error
 ```

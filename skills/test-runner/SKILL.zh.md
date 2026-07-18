@@ -150,7 +150,7 @@ Skills:
 
 ## 六、与失败上下文的衔接
 
-当 `summary.failed > 0` 时，taichi 会在 `reports/` 目录生成 `FailureContext` JSON 文件（命名形如 `failures-round-1-<timestamp>.json`），供 `taichi-failure-analyzer` 消费。Agent 应在测试结束后检查退出码与 `summary.failed`：
+当 `summary.failed > 0` 时，taichi 会在 `reports/` 目录生成 `failure.Context` JSON 文件（命名形如 `failures-round-1-<timestamp>.json`），供 `taichi-failure-analyzer` 消费。Agent 应在测试结束后检查退出码与 `summary.failed`：
 
 - `failed == 0`：测试通过，无需后续动作
 - `failed > 0`：调用 `taichi-failure-analyzer` 读取失败上下文进行分析

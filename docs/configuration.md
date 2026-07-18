@@ -92,7 +92,7 @@ envs:
     base_url: https://api.example.com
 ```
 
-## 4. Skill Configuration (SkillConfig)
+## 4. Skill Configuration (skill.Config)
 
 ```yaml
 skills:

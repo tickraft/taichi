@@ -1,6 +1,6 @@
 ---
 name: "taichi-code-fixer"
-description: "Fixes project source code based on failure analysis results. Invoke when an AI Agent has completed root cause analysis and needs to generate code fixes, the user requests fixing test failures, or a copilot needs to produce a FixResult for taichi to apply. The input is FailureContext JSON (via stdin or file path); the output is FixResult JSON (patch or direct mode)."
+description: "Fixes project source code based on failure analysis results. Invoke when an AI Agent has completed root cause analysis and needs to generate code fixes, the user requests fixing test failures, or a copilot needs to produce a FixResult for taichi to apply. The input is failure.Context JSON (via stdin or file path); the output is FixResult JSON (patch or direct mode)."
 ---
 
 > 🌐 Languages: [English](SKILL.md) | [中文](SKILL.zh.md)
@@ -9,7 +9,7 @@ description: "Fixes project source code based on failure analysis results. Invok
 
 ## 1. Overview
 
-This Skill lets an AI Agent analyze failure causes based on taichi's failure context (`FailureContext`) and produce code fixes. taichi hands the failure context to the Agent via the `agent.Invoker` interface; the Agent returns a `FixResult`, and taichi then applies the fix (patch mode via `git apply`; direct mode only validates).
+This Skill lets an AI Agent analyze failure causes based on taichi's failure context (`failure.Context`, referred to as `Context` below) and produce code fixes. taichi hands the failure context to the Agent via the `agent.Invoker` interface; the Agent returns a `FixResult`, and taichi then applies the fix (patch mode via `git apply`; direct mode only validates).
 
 This Skill is the "fix" stage of the taichi ↔ AI Agent bidirectional integration loop. It consumes the root cause analysis from `taichi-failure-analyzer` and produces fixes for `taichi-regression-runner` to verify.
 
@@ -27,15 +27,15 @@ This Skill is the "fix" stage of the taichi ↔ AI Agent bidirectional integrati
 
 ## 3. Input Parameters
 
-The Agent receives `FailureContext` JSON via the `agent.Invoker` interface:
+The Agent receives `failure.Context` JSON via the `agent.Invoker` interface:
 
 | Delivery method | Description |
 |-----------------|-------------|
-| **CLIInvoker** | Receives `FailureContext` JSON via stdin, outputs `FixResult` JSON to stdout |
-| **HTTPInvoker** | Receives `FailureContext` JSON via HTTP POST body, reads `FixResult` JSON from the response body |
+| **CLIInvoker** | Receives `failure.Context` JSON via stdin, outputs `FixResult` JSON to stdout |
+| **HTTPInvoker** | Receives `failure.Context` JSON via HTTP POST body, reads `FixResult` JSON from the response body |
 | **File path** | Receives the failure context file path (`reports/failures-round-N-<timestamp>.json`); the Agent reads it itself |
 
-The `FailureContext` JSON structure is detailed in [`taichi-failure-analyzer`](../failure-analyzer/SKILL.md#4-failure-context-format-failurecontext-json).
+The `failure.Context` JSON structure is detailed in [`taichi-failure-analyzer`](../failure-analyzer/SKILL.md#4-failure-context-format-failurecontext-json).
 
 ## 4. Fix Modes
 
