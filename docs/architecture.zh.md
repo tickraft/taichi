@@ -4,7 +4,7 @@
 
 ## 一、设计目标
 
-taichi 是一个**通用的自动化测试编排框架**。核心设计目标：
+Taichi 是一个**通用的自动化测试编排框架**。核心设计目标：
 
 1. **跨项目复用**：不绑定特定项目，通过配置描述任意被测服务
 2. **技能扩展**：以 Skill 为扩展单元，支持 API / gRPC / UI / 静态 / 回归 / 自定义测试类型；第三方插件通过 JSON-over-stdio 协议接入，语言无关
@@ -156,7 +156,7 @@ autofix: Autofix          # 自动修复
 | `list` | 展示项目、环境、技能配置、报告与自动修复配置 |
 | `validate` | 校验配置文件完整性（projects / envs / skills / 唯一性），不执行测试 |
 | `version` | 打印版本、Go 运行时、目标平台 |
-| `mcp` | 启动 MCP Server（基于 stdio 的 JSON-RPC），向 AI Agent 暴露 taichi 工具 |
+| `mcp` | 启动 MCP Server（基于 stdio 的 JSON-RPC），向 AI Agent 暴露 Taichi 工具 |
 | `copilot` | 在外部 AI Agent（通过 `agent.Invoker` 接口）驱动下运行 测试 → 修复 → 回归 闭环 |
 
 ## 四、依赖关系

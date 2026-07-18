@@ -77,7 +77,7 @@ When the `priority` field in config is non-zero, it overrides the skill's defaul
 
 ## 5. Config View
 
-Injected into the skill after being loaded from the taichi config file:
+Injected into the skill after being loaded from the Taichi config file:
 
 ```go
 type Config struct {

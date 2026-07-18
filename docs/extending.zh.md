@@ -4,19 +4,19 @@
 
 ## 一、扩展点总览
 
-taichi 提供四个扩展点，按使用频率排序：
+Taichi 提供四个扩展点，按使用频率排序：
 
 | 扩展点 | 接口 | 包 | 典型场景 |
 |--------|------|-----|---------|
 | 自定义技能 | `skill.TestSkill` | `pkg/skill` | 新增测试类型（如 gRPC、Playwright E2E） |
-| 第三方插件技能 | 任意语言 + JSON-over-stdio | `pkg/skill/plugin` + `sdks/` | 用 Python/Node/Shell 等编写测试技能，无需编译进 taichi |
+| 第三方插件技能 | 任意语言 + JSON-over-stdio | `pkg/skill/plugin` + `sdks/` | 用 Python/Node/Shell 等编写测试技能，无需编译进 Taichi |
 | 自定义环境 | `env.Environment` | `pkg/env` | 新增环境类型（如 Docker、K8s port-forward）；`custom` 类型已支持任意启动命令 |
 | 自定义报告格式 | `report.Writer` | `pkg/report` | HTML 报告、Slack 通知、飞书卡片 |
 | 修复规则 | `autofix.FixRule` | `pkg/autofix` | 新增自动修复策略 |
 
-> **内置技能**：taichi 内置五个技能 —— `api` / `grpc` / `ui` / `static` / `regression`。其中 `grpc` 技能（`pkg/skill/grpc`，`kind: grpc`）仅覆盖配置驱动的冒烟检查（health / connectivity / reflection），刻意不做动态 protobuf 消息构造。若需带编译好的 protobuf 桩代码进行完整的 unary/streaming RPC 测试，请实现第三方插件技能（`kind: plugin`），用小型 Go 助手导入生成的 client 包。
+> **内置技能**：Taichi 内置五个技能 —— `api` / `grpc` / `ui` / `static` / `regression`。其中 `grpc` 技能（`pkg/skill/grpc`，`kind: grpc`）仅覆盖配置驱动的冒烟检查（health / connectivity / reflection），刻意不做动态 protobuf 消息构造。若需带编译好的 protobuf 桩代码进行完整的 unary/streaming RPC 测试，请实现第三方插件技能（`kind: plugin`），用小型 Go 助手导入生成的 client 包。
 
-> **插件进程环境**：插件进程会继承 taichi 父进程的全部环境变量（`os.Environ()`），并叠加为该插件配置的 `env` 字段。请注意敏感变量的隔离。
+> **插件进程环境**：插件进程会继承 Taichi 父进程的全部环境变量（`os.Environ()`），并叠加为该插件配置的 `env` 字段。请注意敏感变量的隔离。
 
 ## 二、自定义技能
 
@@ -91,7 +91,7 @@ func (s *Skill) Teardown(ctx *skill.Context) error {
 
 ### 2.2 注册技能
 
-#### 方式一：编译到 taichi 二进制
+#### 方式一：编译到 Taichi 二进制
 
 在 `pkg/skill/builtin/builtin.go` 的 `Skills()` 中追加（`cmd/taichi` 与 `pkg/mcp` 共用的唯一来源）：
 
@@ -339,7 +339,7 @@ func (s *MySkill) AfterAll(ctx *skill.Context) error {
 
 ## 七、跨项目复用
 
-taichi 作为独立 Go module，可被任意项目引用：
+Taichi 作为独立 Go module，可被任意项目引用：
 
 ### 7.1 作为库引用
 
@@ -366,7 +366,7 @@ taichi run -c my-project-taichi.yaml
 
 ### 7.3 tickraft 集成示例
 
-tickraft 项目通过如下方式集成 taichi：
+tickraft 项目通过如下方式集成 Taichi：
 - tickraft 的测试 runner 改为 import `github.com/tickraft/taichi/pkg/{framework,autofix}`
 - `tickraft/go.mod` 通过 `replace` 指令引用本地 taichi
 

@@ -1,32 +1,30 @@
-# taichi 与 AI Agent 集成指南
+# Taichi 与 AI Agent 集成指南
 
 > 🌐 语言: [English](agent-integration.md) | [中文](agent-integration.zh.md)
 
-> 本文档描述 taichi 测试编排框架与 AI Agent（如 Trae IDE Agent、自定义 Agent）的双向集成架构、调用接口与修复闭环。
+> 本文档描述 Taichi 测试编排框架与 AI Agent（如 Trae IDE Agent、自定义 Agent）的双向集成架构、调用接口与修复闭环。
 
-## 一、概述
+Taichi 与 AI Agent 的集成是**双向**的，两个方向互补，共同构成「测试 → 分析 → 修复 → 回归」的全自动闭环。失败上下文（`Context`）作为两侧的信息交换契约。
 
-taichi 与 AI Agent 的集成是**双向**的，两个方向互补，共同构成「测试 → 分析 → 修复 → 回归」的全自动闭环。失败上下文（`Context`）作为两侧的信息交换契约。
+### 方向 1：Taichi 作为 MCP Server 被 AI Agent 调用（Agent 主导）
 
-### 方向 1：taichi 作为 MCP Server 被 AI Agent 调用（Agent 主导）
-
-AI Agent 处于主导地位，按需调用 taichi 暴露的 MCP 工具执行测试、列出配置、读取失败、运行回归。Agent 自行编排分析、修复与验证流程。
+AI Agent 处于主导地位，按需调用 Taichi 暴露的 MCP 工具执行测试、列出配置、读取失败、运行回归。Agent 自行编排分析、修复与验证流程。
 
 - 适用：Agent 工作流中需要灵活触发测试，Agent 具备完整的分析-修复能力
 - 协议：MCP（Model Context Protocol）或 CLI 子进程调用
-- 信息流：Agent → taichi（调用工具）→ taichi 返回结果 → Agent 决策
+- 信息流：Agent → taichi（调用工具）→ Taichi 返回结果 → Agent 决策
 
-### 方向 2：taichi 在编排中调用 AI Agent 修复（taichi 主导的 copilot 模式）
+### 方向 2：Taichi 在编排中调用 AI Agent 修复（Taichi 主导的 copilot 模式）
 
-taichi 处于主导地位，在测试失败时主动通过 `agent.Invoker` 接口调用 AI Agent 进行分析与修复，修复后自动回归，循环直至通过或耗尽轮次。
+Taichi 处于主导地位，在测试失败时主动通过 `agent.Invoker` 接口调用 AI Agent 进行分析与修复，修复后自动回归，循环直至通过或耗尽轮次。
 
-- 适用：CI / 命令行场景，希望 taichi 自驱完成「测试-修复-回归」闭环
+- 适用：CI / 命令行场景，希望 Taichi 自驱完成「测试-修复-回归」闭环
 - 协议：CLI（stdin/stdout JSON）或 HTTP API
-- 信息流：taichi → Agent（传递 `Context`）→ Agent 返回 `FixResult` → taichi 应用并回归
+- 信息流：taichi → Agent（传递 `Context`）→ Agent 返回 `FixResult` → Taichi 应用并回归
 
 ### 失败上下文：信息交换契约
 
-无论哪个方向，taichi 与 Agent 之间都以 `Context` JSON 作为失败信息的标准载体，以 `FixResult` JSON 作为修复产出的标准载体。两者定义于：
+无论哪个方向，Taichi 与 Agent 之间都以 `Context` JSON 作为失败信息的标准载体，以 `FixResult` JSON 作为修复产出的标准载体。两者定义于：
 
 - `pkg/failure/failure.go`：`Context` / `FailedCase`
 - `pkg/agent/agent.go`：`FixResult` / `FixMode` / `Invoker` 接口
@@ -74,7 +72,7 @@ taichi run (测试)
 
 ## 三、MCP Server 使用
 
-taichi 可作为 MCP Server 运行，向 AI Agent 暴露测试编排能力。
+Taichi 可作为 MCP Server 运行，向 AI Agent 暴露测试编排能力。
 
 ### 3.1 启动 MCP Server
 
@@ -169,7 +167,7 @@ taichi mcp -c configs/taichi.yaml
 
 ## 四、Copilot 使用
 
-taichi 主导的 copilot 模式通过 `taichi copilot` 命令触发，自动完成「测试 → 失败 → Agent 修复 → 回归测试 → 循环」。
+Taichi 主导的 copilot 模式通过 `taichi copilot` 命令触发，自动完成「测试 → 失败 → Agent 修复 → 回归测试 → 循环」。
 
 ### 4.1 CLI 调用
 
@@ -211,7 +209,7 @@ taichi copilot -c configs/taichi.yaml \
 
 ## 五、Agent Invoker 实现
 
-taichi 通过 `agent.Invoker` 接口抽象 AI Agent 的调用方式，内置两种实现，并支持自定义。
+Taichi 通过 `agent.Invoker` 接口抽象 AI Agent 的调用方式，内置两种实现，并支持自定义。
 
 ### 5.1 Invoker 接口
 
@@ -241,7 +239,7 @@ invoker := &agent.CLIInvoker{
 契约：
 - stdin：`Context` JSON（紧凑格式）
 - stdout：`FixResult` JSON（紧凑格式）
-- stderr：Agent 自由输出（taichi 仅在出错时记录）
+- stderr：Agent 自由输出（Taichi 仅在出错时记录）
 - 退出码：非零视为调用失败
 
 ### 5.3 HTTPInvoker：HTTP API 调用
@@ -298,11 +296,11 @@ result, err := o.RunCopilot(ctx, orchestrator.CopilotOptions{
 
 ## 六、修复模式
 
-taichi 通过 `agent.PatchApplier` 应用 Agent 的修复产出，支持两种模式。
+Taichi 通过 `agent.PatchApplier` 应用 Agent 的修复产出，支持两种模式。
 
 ### 6.1 patch 模式
 
-Agent 生成 unified diff 补丁，taichi 应用到项目源码。
+Agent 生成 unified diff 补丁，Taichi 应用到项目源码。
 
 - **应用方式**：优先 `git apply --whitespace=fix`，失败回退 `patch -p1 --no-backup-if-mismatch`
 - **路径解析**：patch 中路径带 `a/` `b/` 前缀（git diff 风格），相对于 `project_root` 解析
@@ -322,11 +320,11 @@ Agent 生成 unified diff 补丁，taichi 应用到项目源码。
 
 ### 6.2 direct 模式
 
-Agent 通过文件编辑工具直接修改源码文件，taichi 仅验证修改有效（文件存在且可读，非目录）。
+Agent 通过文件编辑工具直接修改源码文件，Taichi 仅验证修改有效（文件存在且可读，非目录）。
 
 - **适用**：Agent 具备文件编辑能力（如 IDE 内 Agent）
-- **验证**：taichi 调用 `PatchApplier.VerifyDirectFix` 检查 `modified_files` 列表
-- **不介入写入**：taichi 不修改任何文件，仅校验
+- **验证**：Taichi 调用 `PatchApplier.VerifyDirectFix` 检查 `modified_files` 列表
+- **不介入写入**：Taichi 不修改任何文件，仅校验
 
 `FixResult` 示例：
 
@@ -343,7 +341,7 @@ Agent 通过文件编辑工具直接修改源码文件，taichi 仅验证修改�
 
 ## 七、失败上下文格式
 
-`Context` 是 taichi ↔ AI Agent 的信息交换契约，定义于 [`pkg/failure/failure.go`](../pkg/failure/failure.go)。
+`Context` 是 Taichi ↔ AI Agent 的信息交换契约，定义于 [`pkg/failure/failure.go`](../pkg/failure/failure.go)。
 
 ### 7.1 JSON 结构
 
@@ -390,7 +388,7 @@ Agent 通过文件编辑工具直接修改源码文件，taichi 仅验证修改�
 
 ### 7.3 生成与消费
 
-- **生成**：taichi 在测试存在失败时，由 `failure.FromResults` 从测试结果快照构建，通过 `WriteToFile` 写入 `reports/failures-round-<N>-<timestamp>.json`
+- **生成**：Taichi 在测试存在失败时，由 `failure.FromResults` 从测试结果快照构建，通过 `WriteToFile` 写入 `reports/failures-round-<N>-<timestamp>.json`
 - **消费**：Agent 通过文件路径读取，或经 `CLIInvoker` stdin / `HTTPInvoker` body 接收
 - **可序列化**：`Context` 实现 JSON 序列化/反序列化，`ReadFromFile` 可从文件还原
 

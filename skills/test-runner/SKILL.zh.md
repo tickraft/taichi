@@ -1,17 +1,17 @@
 ---
 name: "taichi-test-runner"
-description: "通过 taichi CLI 或 MCP Server 执行自动化测试。当用户请求运行 taichi 测试编排、执行项目测试、查看测试结果摘要、或在 AI Agent 工作流中触发一次测试运行时调用。输入为配置文件路径、项目名、技能过滤与超时，输出为结构化测试结果摘要（通过/失败/跳过数、耗时、各技能结果）。"
+description: "通过 Taichi CLI 或 MCP Server 执行自动化测试。当用户请求运行 Taichi 测试编排、执行项目测试、查看测试结果摘要、或在 AI Agent 工作流中触发一次测试运行时调用。输入为配置文件路径、项目名、技能过滤与超时，输出为结构化测试结果摘要（通过/失败/跳过数、耗时、各技能结果）。"
 ---
 
 > 🌐 语言: [English](SKILL.md) | [中文](SKILL.zh.md)
 
-# taichi 测试运行器 Skill
+# Taichi 测试运行器 Skill
 
 ## 一、简介
 
-本 Skill 用于让 AI Agent 通过 taichi 执行一次完整的自动化测试编排。taichi 是一个通用的测试编排框架，按配置文件描述被测项目、环境与技能，编排一次完整的测试运行，并生成 JSON / JUnit XML / 人类可读摘要报告。
+本 Skill 用于让 AI Agent 通过 Taichi 执行一次完整的自动化测试编排。Taichi 是一个通用的测试编排框架，按配置文件描述被测项目、环境与技能，编排一次完整的测试运行，并生成 JSON / JUnit XML / 人类可读摘要报告。
 
-本 Skill 是 taichi ↔ AI Agent 双向集成闭环中的「测试执行」环节，产出 `TestResults` 供后续的失败分析与修复消费。
+本 Skill 是 Taichi ↔ AI Agent 双向集成闭环中的「测试执行」环节，产出 `TestResults` 供后续的失败分析与修复消费。
 
 ## 二、何时调用本 Skill
 
@@ -30,7 +30,7 @@ description: "通过 taichi CLI 或 MCP Server 执行自动化测试。当用户
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `config` | string | 是 | taichi 配置文件路径（YAML），如 `configs/taichi.yaml` |
+| `config` | string | 是 | Taichi 配置文件路径（YAML），如 `configs/taichi.yaml` |
 | `project` | string | 否 | 被测项目名。空表示运行配置中的第一个项目 |
 | `skill` | string[] | 否 | 技能过滤，仅运行指定技能（可重复，如 `api`、`ui`）。空表示运行项目配置的全部技能 |
 | `timeout` | duration | 否 | 本次运行的总超时（如 `30m`、`90s`）。`0` 表示不限，监听 SIGINT/SIGTERM 优雅取消 |
@@ -150,7 +150,7 @@ Skills:
 
 ## 六、与失败上下文的衔接
 
-当 `summary.failed > 0` 时，taichi 会在 `reports/` 目录生成 `failure.Context` JSON 文件（命名形如 `failures-round-1-<timestamp>.json`），供 `taichi-failure-analyzer` 消费。Agent 应在测试结束后检查退出码与 `summary.failed`：
+当 `summary.failed > 0` 时，Taichi 会在 `reports/` 目录生成 `failure.Context` JSON 文件（命名形如 `failures-round-1-<timestamp>.json`），供 `taichi-failure-analyzer` 消费。Agent 应在测试结束后检查退出码与 `summary.failed`：
 
 - `failed == 0`：测试通过，无需后续动作
 - `failed > 0`：调用 `taichi-failure-analyzer` 读取失败上下文进行分析

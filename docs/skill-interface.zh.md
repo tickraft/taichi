@@ -74,7 +74,7 @@ Teardown(ctx)      ← 资源释放（每次运行，即使 Run 失败）
 
 ## 五、Config 配置视图
 
-由 taichi 配置文件加载后注入技能：
+由 Taichi 配置文件加载后注入技能：
 
 ```go
 type Config struct {

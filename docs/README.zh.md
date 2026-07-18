@@ -1,8 +1,8 @@
-# taichi 文档索引
+# Taichi 文档索引
 
 > 🌐 语言: [English](README.md) | [中文](README.zh.md)
 
-> taichi 是一个通用的自动化测试编排框架。
+> Taichi 是一个通用的自动化测试编排框架。
 
 ## 文档目录
 

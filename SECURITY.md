@@ -4,7 +4,7 @@
 
 ## Supported Versions
 
-Only the **latest published release** of taichi receives security fixes.
+Only the **latest published release** of Taichi receives security fixes.
 
 | Version | Supported          |
 | ------- | ------------------ |

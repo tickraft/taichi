@@ -1,21 +1,21 @@
 > 🌐 Languages: [English](README.md) | [中文](README.zh.md)
 
-# taichi Node.js Plugin SDK
+# Taichi Node.js Plugin SDK
 
-Provides Node.js developers with a wrapper for the taichi plugin protocol, so you only
+Provides Node.js developers with a wrapper for the Taichi plugin protocol, so you only
 need to write test logic without worrying about stdin reading, JSON parsing, or stdout
 output.
 
 ## Protocol Overview
 
-taichi integrates third-party test plugins via `kind: plugin`. A plugin is any executable
-program; taichi communicates with it via JSON over stdin/stdout:
+Taichi integrates third-party test plugins via `kind: plugin`. A plugin is any executable
+program; Taichi communicates with it via JSON over stdin/stdout:
 
 | Direction | Carrier | Content |
 |-----------|---------|---------|
 | taichi → plugin | stdin | `PluginInput` JSON |
 | plugin → taichi | stdout | `PluginOutput` JSON |
-| plugin → taichi | stderr | Free-form logs (taichi forwards to its own logger) |
+| plugin → taichi | stderr | Free-form logs (Taichi forwards to its own logger) |
 
 Exit code semantics: `exit 0` = normal execution (pass/fail is expressed by stdout JSON);
 `exit ≠ 0` = plugin-level fatal error.
@@ -135,9 +135,9 @@ Expected output looks like:
 {"cases":[{"name":"GET /health","passed":true,"message":"HTTP 200","duration_ms":12}]}
 ```
 
-Debug logs are written to stderr and can be forwarded by taichi to its own logger.
+Debug logs are written to stderr and can be forwarded by Taichi to its own logger.
 
-## Integration with taichi Config
+## Integration with Taichi Config
 
 Declare `kind: plugin` in `taichi.yaml`, point `raw.command` to the script; custom
 fields are passed through to `input.config`:

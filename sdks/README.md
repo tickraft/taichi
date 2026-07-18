@@ -1,10 +1,10 @@
 > 🌐 Languages: [English](README.md) | [中文](README.zh.md)
 
-# taichi Plugin SDK Overview
+# Taichi Plugin SDK Overview
 
-taichi's plugin protocol is a language-agnostic JSON-over-stdio protocol: taichi starts
+Taichi's plugin protocol is a language-agnostic JSON-over-stdio protocol: Taichi starts
 the plugin process, writes `PluginInput` JSON to the plugin's stdin, the plugin executes
-tests and writes `PluginOutput` JSON to stdout, and stderr logs are forwarded by taichi
+tests and writes `PluginOutput` JSON to stdout, and stderr logs are forwarded by Taichi
 to its own logger. `exit 0` means normal execution (pass/fail is expressed by the stdout
 JSON); `exit ≠ 0` means a plugin-level fatal error. This directory provides SDKs for
 common languages, wrapping stdin reading, JSON parsing, and stdout output to lower the
@@ -31,7 +31,7 @@ third-party packages required.
 
 ## Local Debugging
 
-You can debug plugins without starting taichi by piping `PluginInput` JSON directly:
+You can debug plugins without starting Taichi by piping `PluginInput` JSON directly:
 
 ```bash
 # Python
@@ -44,7 +44,7 @@ echo '{"skill_name":"x","project_name":"demo","base_url":"http://127.0.0.1:8000"
 echo '{"skill_name":"x","project_name":"demo","base_url":"http://127.0.0.1:8000","config":{"endpoints":["/health"]}}' | bash sdks/shell/example.sh
 ```
 
-## Integration with taichi Config
+## Integration with Taichi Config
 
 Declare `kind: plugin` in `taichi.yaml`, point `raw.command` to the plugin script; custom
 fields in `raw` (after removing `command`/`args`/`env`/`workdir`/`timeout`) are passed

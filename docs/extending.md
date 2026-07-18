@@ -14,7 +14,7 @@ Taichi provides four extension points, ordered by usage frequency:
 | Custom report format | `report.Writer` | `pkg/report` | HTML reports, Slack notifications, Lark cards |
 | Fix rule | `autofix.FixRule` | `pkg/autofix` | Add auto-fix strategies |
 
-> **Built-in skills**: taichi ships five built-in skills — `api` / `grpc` / `ui` / `static` / `regression`. The `grpc` skill (`pkg/skill/grpc`, `kind: grpc`) covers config-driven smoke checks only (health / connectivity / reflection); it intentionally avoids dynamic protobuf message construction. For full unary/streaming RPC testing with compiled protobuf stubs, implement a third-party plugin skill (`kind: plugin`) with a small Go helper that imports the generated client package.
+> **Built-in skills**: Taichi ships five built-in skills — `api` / `grpc` / `ui` / `static` / `regression`. The `grpc` skill (`pkg/skill/grpc`, `kind: grpc`) covers config-driven smoke checks only (health / connectivity / reflection); it intentionally avoids dynamic protobuf message construction. For full unary/streaming RPC testing with compiled protobuf stubs, implement a third-party plugin skill (`kind: plugin`) with a small Go helper that imports the generated client package.
 
 > **Plugin process environment**: plugin processes inherit all of the taichi parent process's environment variables (`os.Environ()`) plus any `env` fields configured for the plugin. Be mindful of sensitive variable isolation.
 
@@ -91,7 +91,7 @@ func (s *Skill) Teardown(ctx *skill.Context) error {
 
 ### 2.2 Register the Skill
 
-#### Option 1: Compile into the taichi binary
+#### Option 1: Compile into the Taichi binary
 
 Append to `Skills()` in `pkg/skill/builtin/builtin.go` (the single source of truth shared by `cmd/taichi` and `pkg/mcp`):
 
@@ -366,7 +366,7 @@ taichi run -c my-project-taichi.yaml
 
 ### 7.3 tickraft Integration Example
 
-The tickraft project integrates taichi as follows:
+The tickraft project integrates Taichi as follows:
 - tickraft's test runner imports `github.com/tickraft/taichi/pkg/{framework,autofix}`
 - `tickraft/go.mod` references the local taichi via a `replace` directive
 

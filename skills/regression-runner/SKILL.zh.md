@@ -5,13 +5,13 @@ description: "在代码修复后运行回归测试，验证修复未引入新问
 
 > 🌐 语言: [English](SKILL.md) | [中文](SKILL.zh.md)
 
-# taichi 回归测试运行器 Skill
+# Taichi 回归测试运行器 Skill
 
 ## 一、简介
 
-本 Skill 用于让 AI Agent 在代码修复后运行回归测试，验证修复消除了原有失败且未引入新问题。taichi 内置 `regression` 技能（`pkg/skill/regression`），通过 `--skill regression` 过滤即可仅执行回归用例。
+本 Skill 用于让 AI Agent 在代码修复后运行回归测试，验证修复消除了原有失败且未引入新问题。Taichi 内置 `regression` 技能（`pkg/skill/regression`），通过 `--skill regression` 过滤即可仅执行回归用例。
 
-本 Skill 是 taichi ↔ AI Agent 双向集成闭环中的「回归验证」环节，承接 `taichi-code-fixer` 的修复产出，确认闭环成功。
+本 Skill 是 Taichi ↔ AI Agent 双向集成闭环中的「回归验证」环节，承接 `taichi-code-fixer` 的修复产出，确认闭环成功。
 
 ## 二、何时调用本 Skill
 
@@ -29,7 +29,7 @@ description: "在代码修复后运行回归测试，验证修复未引入新问
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `config` | string | 是 | taichi 配置文件路径（YAML），如 `configs/taichi.yaml` |
+| `config` | string | 是 | Taichi 配置文件路径（YAML），如 `configs/taichi.yaml` |
 | `project` | string | 否 | 被测项目名。空表示运行配置中的第一个项目 |
 | `timeout` | duration | 否 | 本次运行的总超时（如 `30m`、`90s`）。`0` 表示不限 |
 | `reports-dir` | string | 否 | 覆盖配置中的报告输出目录 |

@@ -1,17 +1,17 @@
 ---
 name: "taichi-failure-analyzer"
-description: "读取 taichi 生成的失败上下文，分析测试失败根因。当 taichi 测试运行存在失败用例、用户请求分析测试失败原因、定位 bug 根因、或在 copilot 中需要为修复提供根因分析时调用。输入为失败上下文 JSON 文件路径，输出为根因分析报告（失败用例、根因、涉及文件、建议修复方式）。"
+description: "读取 Taichi 生成的失败上下文，分析测试失败根因。当 Taichi 测试运行存在失败用例、用户请求分析测试失败原因、定位 bug 根因、或在 copilot 中需要为修复提供根因分析时调用。输入为失败上下文 JSON 文件路径，输出为根因分析报告（失败用例、根因、涉及文件、建议修复方式）。"
 ---
 
 > 🌐 语言: [English](SKILL.md) | [中文](SKILL.zh.md)
 
-# taichi 失败分析器 Skill
+# Taichi 失败分析器 Skill
 
 ## 一、简介
 
-本 Skill 用于让 AI Agent 读取 taichi 在测试失败后生成的结构化失败上下文（`failure.Context`，下文简称 `Context`），结合服务日志与项目源码，分析失败根因，产出可执行的根因分析报告。
+本 Skill 用于让 AI Agent 读取 Taichi 在测试失败后生成的结构化失败上下文（`failure.Context`，下文简称 `Context`），结合服务日志与项目源码，分析失败根因，产出可执行的根因分析报告。
 
-本 Skill 是 taichi ↔ AI Agent 双向集成闭环中的「根因分析」环节，承接 `taichi-test-runner` 产出的失败上下文，为 `taichi-code-fixer` 提供修复依据。
+本 Skill 是 Taichi ↔ AI Agent 双向集成闭环中的「根因分析」环节，承接 `taichi-test-runner` 产出的失败上下文，为 `taichi-code-fixer` 提供修复依据。
 
 ## 二、何时调用本 Skill
 
@@ -30,11 +30,11 @@ description: "读取 taichi 生成的失败上下文，分析测试失败根因�
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `failure_context_path` | string | 是 | 失败上下文 JSON 文件路径，由 taichi 在测试失败后生成到 `reports/` 目录，命名形如 `failures-round-1-<timestamp>.json` |
+| `failure_context_path` | string | 是 | 失败上下文 JSON 文件路径，由 Taichi 在测试失败后生成到 `reports/` 目录，命名形如 `failures-round-1-<timestamp>.json` |
 
 ## 四、失败上下文格式（failure.Context JSON）
 
-taichi 在测试存在失败用例时，将结构化失败上下文写入 `reports/` 目录，作为 taichi ↔ AI Agent 的信息交换契约。完整结构如下：
+Taichi 在测试存在失败用例时，将结构化失败上下文写入 `reports/` 目录，作为 Taichi ↔ AI Agent 的信息交换契约。完整结构如下：
 
 ```json
 {

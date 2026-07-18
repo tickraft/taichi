@@ -1,14 +1,14 @@
-# Contributing to taichi
+# Contributing to Taichi
 
 > 🌐 Languages: [English](CONTRIBUTING.md) | [中文](CONTRIBUTING.zh.md)
 
-First of all, thank you for taking the time to contribute to taichi! 🎉
+First of all, thank you for taking the time to contribute to Taichi! 🎉
 
 This document describes how to set up a development environment and the conventions we follow. Whether you are fixing a typo, reporting a bug, or proposing a new feature, every contribution is welcome.
 
 ## Table of Contents
 
-- [Contributing to taichi](#contributing-to-taichi)
+- [Contributing to Taichi](#contributing-to-taichi)
   - [Table of Contents](#table-of-contents)
   - [Development Environment](#development-environment)
   - [Development Workflow](#development-workflow)
@@ -26,7 +26,7 @@ This document describes how to set up a development environment and the conventi
 
 ## Development Environment
 
-To build and test taichi locally you need:
+To build and test Taichi locally you need:
 
 - **Go** 1.26 or newer
 - **make**
@@ -136,7 +136,7 @@ Use the [Bug Report template](.github/ISSUE_TEMPLATE/bug_report.md) and provide:
 - A clear description of the problem.
 - Step-by-step reproduction instructions.
 - Expected behavior vs. actual behavior.
-- Environment details: taichi version, OS, Go version, and a minimal relevant config snippet.
+- Environment details: Taichi version, OS, Go version, and a minimal relevant config snippet.
 - Relevant logs (redact secrets).
 
 ## Proposing Features
@@ -147,7 +147,7 @@ Use the [Bug Report template](.github/ISSUE_TEMPLATE/bug_report.md) and provide:
 
 ## Adding a New Skill
 
-A skill is the unit of test execution in taichi. To add a new built-in skill:
+A skill is the unit of test execution in Taichi. To add a new built-in skill:
 
 1. Study the implementation pattern under `pkg/skill/api`.
 2. Implement the `TestSkill` interface for your skill.
@@ -163,7 +163,7 @@ To support a new environment (e.g. a new container runtime or remote sandbox):
 
 ## Third-Party Plugins
 
-taichi is plugin-driven and language-agnostic. You do **not** need to modify taichi itself to add a plugin — you can implement skills in any language using the SDKs under `sdks/`. See that directory for examples.
+Taichi is plugin-driven and language-agnostic. You do **not** need to modify Taichi itself to add a plugin — you can implement skills in any language using the SDKs under `sdks/`. See that directory for examples.
 
 ## Code of Conduct
 

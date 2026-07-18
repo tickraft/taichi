@@ -1,24 +1,24 @@
 ---
 name: "taichi-code-fixer"
-description: "Fixes project source code based on failure analysis results. Invoke when an AI Agent has completed root cause analysis and needs to generate code fixes, the user requests fixing test failures, or a copilot needs to produce a FixResult for taichi to apply. The input is failure.Context JSON (via stdin or file path); the output is FixResult JSON (patch or direct mode)."
+description: "Fixes project source code based on failure analysis results. Invoke when an AI Agent has completed root cause analysis and needs to generate code fixes, the user requests fixing test failures, or a copilot needs to produce a FixResult for Taichi to apply. The input is failure.Context JSON (via stdin or file path); the output is FixResult JSON (patch or direct mode)."
 ---
 
 > 🌐 Languages: [English](SKILL.md) | [中文](SKILL.zh.md)
 
-# taichi Code Fixer Skill
+# Taichi Code Fixer Skill
 
 ## 1. Overview
 
-This Skill lets an AI Agent analyze failure causes based on taichi's failure context (`failure.Context`, referred to as `Context` below) and produce code fixes. taichi hands the failure context to the Agent via the `agent.Invoker` interface; the Agent returns a `FixResult`, and taichi then applies the fix (patch mode via `git apply`; direct mode only validates).
+This Skill lets an AI Agent analyze failure causes based on Taichi's failure context (`failure.Context`, referred to as `Context` below) and produce code fixes. Taichi hands the failure context to the Agent via the `agent.Invoker` interface; the Agent returns a `FixResult`, and Taichi then applies the fix (patch mode via `git apply`; direct mode only validates).
 
-This Skill is the "fix" stage of the taichi ↔ AI Agent bidirectional integration loop. It consumes the root cause analysis from `taichi-failure-analyzer` and produces fixes for `taichi-regression-runner` to verify.
+This Skill is the "fix" stage of the Taichi ↔ AI Agent bidirectional integration loop. It consumes the root cause analysis from `taichi-failure-analyzer` and produces fixes for `taichi-regression-runner` to verify.
 
 ## 2. When to Invoke This Skill
 
 **Mandatory invocation scenarios**:
 - `taichi-failure-analyzer` has produced a root cause analysis report that needs to be materialized into code changes
 - The user mentions "fix test failure", "fix the bug", "generate a patch", "apply a patch"
-- A copilot round has a test failure and needs the Agent to produce a `FixResult` for taichi to apply
+- A copilot round has a test failure and needs the Agent to produce a `FixResult` for Taichi to apply
 
 **Do not invoke scenarios**:
 - Root cause has not been analyzed yet (call `taichi-failure-analyzer` first)
@@ -43,15 +43,15 @@ Two fix execution methods are supported, declared by the Agent in `FixResult.mod
 
 ### 4.1 patch mode (`mode: "patch"`)
 
-The Agent generates a unified diff patch; taichi applies it to the project source via `git apply` (falling back to the `patch` command).
+The Agent generates a unified diff patch; Taichi applies it to the project source via `git apply` (falling back to the `patch` command).
 
-Applicable when: the Agent has no direct file editing capability, or needs taichi to uniformly apply and roll back.
+Applicable when: the Agent has no direct file editing capability, or needs Taichi to uniformly apply and roll back.
 
 ### 4.2 direct mode (`mode: "direct"`)
 
-The Agent directly modifies source files via file editing tools; taichi only verifies that the modified files exist and are readable.
+The Agent directly modifies source files via file editing tools; Taichi only verifies that the modified files exist and are readable.
 
-Applicable when: the Agent has file editing capability (e.g. an in-IDE Agent); taichi does not intervene in file writing.
+Applicable when: the Agent has file editing capability (e.g. an in-IDE Agent); Taichi does not intervene in file writing.
 
 ## 5. Output Format (FixResult JSON)
 
@@ -72,7 +72,7 @@ The Agent must output the following `FixResult` JSON to stdout (CLIInvoker) or t
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `fixed` | bool | Yes | `true` means the Agent believes the fix was successful; `false` means it cannot be fixed, and taichi terminates the loop |
+| `fixed` | bool | Yes | `true` means the Agent believes the fix was successful; `false` means it cannot be fixed, and Taichi terminates the loop |
 | `mode` | string | Yes | Fix method: `patch` or `direct` |
 | `patch` | string | Required for patch mode | Patch content in unified diff format |
 | `modified_files` | string[] | Yes | List of modified files (required in both modes, used for validation and rollback) |
@@ -119,7 +119,7 @@ Example:
  }
 ```
 
-taichi first calls `git apply --whitespace=fix` when applying, falling back to `patch -p1`. The `a/` `b/` prefixes in paths are automatically stripped (`-p1`).
+Taichi first calls `git apply --whitespace=fix` when applying, falling back to `patch -p1`. The `a/` `b/` prefixes in paths are automatically stripped (`-p1`).
 
 ## 7. Constraints
 
@@ -131,7 +131,7 @@ taichi first calls `git apply --whitespace=fix` when applying, falling back to `
    - Business logic must not `panic`; return exceptions via `error`
    - Logging via `zap`; do not print directly to stdout
 4. **Minimize changes**: Fixes should focus on eliminating the failure; do not refactor unrelated code or add irrelevant comments
-5. **Rollbackable**: In patch mode, taichi can roll back via `git checkout`; in direct mode, the Agent should ensure changes are reversible
+5. **Rollbackable**: In patch mode, Taichi can roll back via `git checkout`; in direct mode, the Agent should ensure changes are reversible
 
 ## 8. Integration with Other Skills
 
@@ -142,9 +142,9 @@ taichi first calls `git apply --whitespace=fix` when applying, falling back to `
 
 | Scenario | Agent response |
 |----------|----------------|
-| Cannot locate root cause | Return `fixed: false`; `message` explains it cannot be fixed; taichi terminates the current round |
+| Cannot locate root cause | Return `fixed: false`; `message` explains it cannot be fixed; Taichi terminates the current round |
 | Fix would introduce risk | Return `fixed: false`; `message` explains the risk and recommends manual intervention |
-| Patch application fails | taichi records `ApplyError`; copilot proceeds to the next round or terminates |
+| Patch application fails | Taichi records `ApplyError`; copilot proceeds to the next round or terminates |
 
 ## 10. Output Self-check List
 

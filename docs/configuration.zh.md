@@ -4,7 +4,7 @@
 
 ## 一、配置文件概览
 
-taichi 使用单一 YAML 配置文件描述被测项目、环境、技能与输出。配置 schema 定义于 [pkg/config/config.go](../pkg/config/config.go)。
+Taichi 使用单一 YAML 配置文件描述被测项目、环境、技能与输出。配置 schema 定义于 [pkg/config/config.go](../pkg/config/config.go)。
 
 五大顶层结构：
 
@@ -83,7 +83,7 @@ envs:
 
 ### 3.4 外部托管环境
 
-当 `base_url` 非空时，taichi 跳过启动/停止，直接使用此 URL 访问被测服务：
+当 `base_url` 非空时，Taichi 跳过启动/停止，直接使用此 URL 访问被测服务：
 
 ```yaml
 envs:
@@ -214,7 +214,7 @@ taichi run -c taichi.yaml -p my-frontend
 
 ## 八、配置校验规则
 
-taichi 在加载时自动校验：
+Taichi 在加载时自动校验：
 
 - `projects[*].name` 不可为空
 - `projects[*].env` 引用的键必须存在于 `envs`

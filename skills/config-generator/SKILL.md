@@ -1,15 +1,15 @@
 ---
 name: "taichi-config-generator"
-description: "Automatically generates taichi test orchestration config files (taichi.yaml) by analyzing project source code. Invoke when the user requests generating test config for a new project, initializing taichi tests, or adapting taichi to a new project. The Agent scans the project directory structure, identifies project type, extracts HTTP routes and health-check endpoints, and produces a ready-to-use taichi.yaml that can be fine-tuned manually afterwards."
+description: "Automatically generates Taichi test orchestration config files (taichi.yaml) by analyzing project source code. Invoke when the user requests generating test config for a new project, initializing Taichi tests, or adapting Taichi to a new project. The Agent scans the project directory structure, identifies project type, extracts HTTP routes and health-check endpoints, and produces a ready-to-use taichi.yaml that can be fine-tuned manually afterwards."
 ---
 
 > 🌐 Languages: [English](SKILL.md) | [中文](SKILL.zh.md)
 
-# taichi Config Generator Skill
+# Taichi Config Generator Skill
 
 ## 1. Overview
 
-This Skill lets an AI Agent automatically generate the config file (`taichi.yaml`) required by the taichi test orchestration framework through static analysis of the project source code and directory structure. taichi is a general-purpose automated test orchestration framework: by describing the project under test, environments, and skills in a config file, it can orchestrate a complete test run.
+This Skill lets an AI Agent automatically generate the config file (`taichi.yaml`) required by the Taichi test orchestration framework through static analysis of the project source code and directory structure. Taichi is a general-purpose automated test orchestration framework: by describing the project under test, environments, and skills in a config file, it can orchestrate a complete test run.
 
 The generated config covers the following:
 - Project under test declaration (project name, root directory, environment binding, enabled skills list)
@@ -23,8 +23,8 @@ The generated result can be verified directly by running `taichi run`; users can
 ## 2. When to Invoke This Skill
 
 **Mandatory invocation scenarios**:
-- The user mentions "generate taichi config", "initialize test config", "add taichi tests for a new project"
-- The user wants taichi to adapt to a new project that has not been configured yet
+- The user mentions "generate Taichi config", "initialize test config", "add Taichi tests for a new project"
+- The user wants Taichi to adapt to a new project that has not been configured yet
 - The existing `taichi.yaml` is missing or corrupted and needs to be rebuilt
 - The project has undergone major refactoring (full route changes, tech stack migration) and the config needs to be regenerated
 
@@ -393,7 +393,7 @@ envs:
 After generating the config, the Agent should perform the following validation steps and include the results in the output summary:
 
 1. **YAML syntax validation**: Ensure the generated file can be loaded by a YAML parser
-2. **taichi load validation**: Run `taichi list -c <output_path>` to confirm the config can be loaded correctly by taichi
+2. **Taichi load validation**: Run `taichi list -c <output_path>` to confirm the config can be loaded correctly by Taichi
 3. **Route sanity check**:
    - Whether the health check case is actually reachable (if the service is already running)
    - Whether path-parameter routes are annotated with `expected_status: 404`

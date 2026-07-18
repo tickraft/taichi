@@ -102,7 +102,7 @@ skills:
 
 ## 二、统一响应契约
 
-taichi 内置对 tickraft 体系统一响应契约的验证：所有 API 响应应包含顶层字段 `code` / `msg` / `request_id`。
+Taichi 内置对 tickraft 体系统一响应契约的验证：所有 API 响应应包含顶层字段 `code` / `msg` / `request_id`。
 
 ```
 {

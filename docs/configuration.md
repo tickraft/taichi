@@ -83,7 +83,7 @@ The frontend environment starts a subprocess, captures stdout/stderr to a log fi
 
 ### 3.4 Externally Hosted Environment
 
-When `base_url` is non-empty, taichi skips startup/shutdown and uses this URL to access the service under test:
+When `base_url` is non-empty, Taichi skips startup/shutdown and uses this URL to access the service under test:
 
 ```yaml
 envs:

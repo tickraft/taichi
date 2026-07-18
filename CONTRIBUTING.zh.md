@@ -1,8 +1,8 @@
-# 贡献 taichi
+# 贡献 Taichi
 
 > 🌐 语言: [English](CONTRIBUTING.md) | [中文](CONTRIBUTING.zh.md)
 
-首先，感谢你抽出时间参与 taichi 的贡献！🎉
+首先，感谢你抽出时间参与 Taichi 的贡献！🎉
 
 本文档说明如何搭建开发环境以及我们遵循的约定。无论是修正错别字、报告 bug，还是提议新功能，我们都欢迎你的参与。
 
@@ -24,7 +24,7 @@
 
 ## 开发环境
 
-在本地构建与测试 taichi 需要：
+在本地构建与测试 Taichi 需要：
 
 - **Go** 1.26 或更高版本
 - **make**
@@ -134,7 +134,7 @@ feat(prober): add HTTP probe skill
 - 对问题的清晰描述。
 - 逐步复现步骤。
 - 期望行为与实际行为。
-- 环境信息：taichi 版本、操作系统、Go 版本，以及最小化的相关配置片段。
+- 环境信息：Taichi 版本、操作系统、Go 版本，以及最小化的相关配置片段。
 - 相关日志（请去除敏感信息）。
 
 ## 提议新功能
@@ -145,7 +145,7 @@ feat(prober): add HTTP probe skill
 
 ## 添加新 Skill
 
-Skill 是 taichi 中测试执行的最小单元。要新增内置 skill：
+Skill 是 Taichi 中测试执行的最小单元。要新增内置 skill：
 
 1. 学习 `pkg/skill/api` 下的实现模式。
 2. 为你的 skill 实现 `TestSkill` 接口。
@@ -161,7 +161,7 @@ Skill 是 taichi 中测试执行的最小单元。要新增内置 skill：
 
 ## 第三方插件
 
-taichi 是插件驱动且语言无关的。你**无需**修改 taichi 本身即可添加插件 —— 可以使用 `sdks/` 下的 SDK 以任意语言实现 skill。参见该目录下的示例。
+Taichi 是插件驱动且语言无关的。你**无需**修改 Taichi 本身即可添加插件 —— 可以使用 `sdks/` 下的 SDK 以任意语言实现 skill。参见该目录下的示例。
 
 ## 行为准则
 

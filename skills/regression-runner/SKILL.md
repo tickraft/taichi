@@ -5,13 +5,13 @@ description: "Runs regression tests after a code fix to verify the fix did not i
 
 > 🌐 Languages: [English](SKILL.md) | [中文](SKILL.zh.md)
 
-# taichi Regression Runner Skill
+# Taichi Regression Runner Skill
 
 ## 1. Overview
 
-This Skill lets an AI Agent run regression tests after a code fix, verifying that the fix eliminated the original failures without introducing new problems. taichi has a built-in `regression` skill (`pkg/skill/regression`); by filtering with `--skill regression`, only regression cases are executed.
+This Skill lets an AI Agent run regression tests after a code fix, verifying that the fix eliminated the original failures without introducing new problems. Taichi has a built-in `regression` skill (`pkg/skill/regression`); by filtering with `--skill regression`, only regression cases are executed.
 
-This Skill is the "regression verification" stage of the taichi ↔ AI Agent bidirectional integration loop. It consumes the fix output from `taichi-code-fixer` and confirms the loop succeeded.
+This Skill is the "regression verification" stage of the Taichi ↔ AI Agent bidirectional integration loop. It consumes the fix output from `taichi-code-fixer` and confirms the loop succeeded.
 
 ## 2. When to Invoke This Skill
 

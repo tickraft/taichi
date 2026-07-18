@@ -1,24 +1,24 @@
 ---
 name: "taichi-code-fixer"
-description: "根据失败分析结果修复项目源码。当 AI Agent 完成根因分析后需要生成代码修复、用户请求修复测试失败、或在 copilot 中需要产出 FixResult 供 taichi 应用时调用。输入为 failure.Context JSON（通过 stdin 或文件路径），输出为 FixResult JSON（patch 或 direct 模式）。"
+description: "根据失败分析结果修复项目源码。当 AI Agent 完成根因分析后需要生成代码修复、用户请求修复测试失败、或在 copilot 中需要产出 FixResult 供 Taichi 应用时调用。输入为 failure.Context JSON（通过 stdin 或文件路径），输出为 FixResult JSON（patch 或 direct 模式）。"
 ---
 
 > 🌐 语言: [English](SKILL.md) | [中文](SKILL.zh.md)
 
-# taichi 代码修复器 Skill
+# Taichi 代码修复器 Skill
 
 ## 一、简介
 
-本 Skill 用于让 AI Agent 根据 taichi 的失败上下文（`failure.Context`，下文简称 `Context`）分析失败原因并产出代码修复。taichi 通过 `agent.Invoker` 接口将失败上下文交给 Agent，Agent 返回 `FixResult`，taichi 再应用修复（patch 模式经 `git apply`，direct 模式仅校验）。
+本 Skill 用于让 AI Agent 根据 Taichi 的失败上下文（`failure.Context`，下文简称 `Context`）分析失败原因并产出代码修复。Taichi 通过 `agent.Invoker` 接口将失败上下文交给 Agent，Agent 返回 `FixResult`，Taichi 再应用修复（patch 模式经 `git apply`，direct 模式仅校验）。
 
-本 Skill 是 taichi ↔ AI Agent 双向集成闭环中的「修复」环节，承接 `taichi-failure-analyzer` 的根因分析，产出供 `taichi-regression-runner` 验证的修复。
+本 Skill 是 Taichi ↔ AI Agent 双向集成闭环中的「修复」环节，承接 `taichi-failure-analyzer` 的根因分析，产出供 `taichi-regression-runner` 验证的修复。
 
 ## 二、何时调用本 Skill
 
 **强制调用场景**：
 - `taichi-failure-analyzer` 已产出根因分析报告，需要落地为代码修改
 - 用户提及「修复测试失败」「fix the bug」「生成补丁」「打 patch」
-- copilot 中某轮测试失败，需要 Agent 产出 `FixResult` 供 taichi 应用
+- copilot 中某轮测试失败，需要 Agent 产出 `FixResult` 供 Taichi 应用
 
 **不应调用场景**：
 - 尚未分析根因（先调用 `taichi-failure-analyzer`）
@@ -43,15 +43,15 @@ Agent 通过 `agent.Invoker` 接口接收 `failure.Context` JSON：
 
 ### 4.1 patch 模式（`mode: "patch"`）
 
-Agent 生成 unified diff 补丁，taichi 通过 `git apply`（回退到 `patch` 命令）应用到项目源码。
+Agent 生成 unified diff 补丁，Taichi 通过 `git apply`（回退到 `patch` 命令）应用到项目源码。
 
-适用场景：Agent 无直接文件编辑能力，或需要 taichi 统一应用与回滚。
+适用场景：Agent 无直接文件编辑能力，或需要 Taichi 统一应用与回滚。
 
 ### 4.2 direct 模式（`mode: "direct"`）
 
-Agent 通过文件编辑工具直接修改源码文件，taichi 仅验证修改后的文件存在且可读。
+Agent 通过文件编辑工具直接修改源码文件，Taichi 仅验证修改后的文件存在且可读。
 
-适用场景：Agent 具备文件编辑能力（如 IDE 内 Agent），taichi 不介入文件写入。
+适用场景：Agent 具备文件编辑能力（如 IDE 内 Agent），Taichi 不介入文件写入。
 
 ## 五、输出格式（FixResult JSON）
 
@@ -72,7 +72,7 @@ Agent 必须向 stdout（CLIInvoker）或 HTTP 响应体（HTTPInvoker）输出�
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `fixed` | bool | 是 | `true` 表示 Agent 认为已成功修复；`false` 表示无法修复，taichi 终止循环 |
+| `fixed` | bool | 是 | `true` 表示 Agent 认为已成功修复；`false` 表示无法修复，Taichi 终止循环 |
 | `mode` | string | 是 | 修复方式：`patch` 或 `direct` |
 | `patch` | string | patch 模式必填 | unified diff 格式的补丁内容 |
 | `modified_files` | string[] | 是 | 被修改的文件列表（两种模式均需填充，用于验证与回滚） |
@@ -119,7 +119,7 @@ Agent 必须向 stdout（CLIInvoker）或 HTTP 响应体（HTTPInvoker）输出�
  }
 ```
 
-taichi 应用时优先调用 `git apply --whitespace=fix`，失败回退 `patch -p1`。路径中的 `a/` `b/` 前缀会被自动剥离（`-p1`）。
+Taichi 应用时优先调用 `git apply --whitespace=fix`，失败回退 `patch -p1`。路径中的 `a/` `b/` 前缀会被自动剥离（`-p1`）。
 
 ## 七、约束
 
@@ -131,7 +131,7 @@ taichi 应用时优先调用 `git apply --whitespace=fix`，失败回退 `patch 
    - 业务逻辑禁止 `panic`，通过 `error` 返回异常
    - 日志通过 `zap` 记录，禁止直接打印到 stdout
 4. **最小化改动**：修复应聚焦于消除失败，不重构无关代码、不添加无关注释
-5. **可回滚**：patch 模式下 taichi 可通过 `git checkout` 回滚；direct 模式下 Agent 应确保修改可逆
+5. **可回滚**：patch 模式下 Taichi 可通过 `git checkout` 回滚；direct 模式下 Agent 应确保修改可逆
 
 ## 八、与其他 Skill 的衔接
 
@@ -142,9 +142,9 @@ taichi 应用时优先调用 `git apply --whitespace=fix`，失败回退 `patch 
 
 | 场景 | Agent 应对 |
 |------|-----------|
-| 无法定位根因 | 返回 `fixed: false`，`message` 说明无法修复，taichi 终止当前轮次 |
+| 无法定位根因 | 返回 `fixed: false`，`message` 说明无法修复，Taichi 终止当前轮次 |
 | 修复会引入风险 | 返回 `fixed: false`，`message` 说明风险，建议人工介入 |
-| patch 应用失败 | taichi 记录 `ApplyError`，copilot 进入下一轮或终止 |
+| patch 应用失败 | Taichi 记录 `ApplyError`，copilot 进入下一轮或终止 |
 
 ## 十、输出自检清单
 

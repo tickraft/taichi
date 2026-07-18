@@ -1,20 +1,20 @@
 > 🌐 语言: [English](README.md) | [中文](README.zh.md)
 
-# taichi Shell 插件 SDK
+# Taichi Shell 插件 SDK
 
-为 bash 开发者提供 taichi 插件协议的封装，让你只需编写测试逻辑，无需关心
+为 bash 开发者提供 Taichi 插件协议的封装，让你只需编写测试逻辑，无需关心
 stdin 读取、JSON 解析与 stdout 输出。本库设计为被 `source` 使用。
 
 ## 协议概述
 
-taichi 通过 `kind: plugin` 接入第三方测试插件。插件是任意可执行程序，taichi 与之
+Taichi 通过 `kind: plugin` 接入第三方测试插件。插件是任意可执行程序，Taichi 与之
 通过 JSON over stdin/stdout 通信：
 
 | 方向 | 载体 | 内容 |
 |------|------|------|
 | taichi → 插件 | stdin | `PluginInput` JSON |
 | 插件 → taichi | stdout | `PluginOutput` JSON |
-| 插件 → taichi | stderr | 自由格式日志（taichi 转发到自身日志器） |
+| 插件 → taichi | stderr | 自由格式日志（Taichi 转发到自身日志器） |
 
 退出码语义：`exit 0` = 正常执行（通过/失败由 stdout JSON 表达）；`exit ≠ 0` =
 插件级致命错误。
@@ -105,9 +105,9 @@ echo '{"skill_name":"x","project_name":"demo","base_url":"http://127.0.0.1:8000"
 {"cases":[{"name":"PluginBootstrap","passed":true,"message":"插件启动成功"},{"name":"GET /health","passed":true,"message":"HTTP 200","duration_ms":45}]}
 ```
 
-调试时的日志会写到 stderr，可被 taichi 转发到自身日志器。
+调试时的日志会写到 stderr，可被 Taichi 转发到自身日志器。
 
-## 与 taichi 配置衔接
+## 与 Taichi 配置衔接
 
 在 `taichi.yaml` 中声明 `kind: plugin`，`raw.command` 指向脚本，自定义字段会
 透传到 `input.config`：

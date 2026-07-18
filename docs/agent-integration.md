@@ -2,11 +2,11 @@
 
 > 🌐 Languages: [English](agent-integration.md) | [中文](agent-integration.zh.md)
 
-> This document describes the bidirectional integration architecture, calling interfaces, and fix loop between the taichi test orchestration framework and AI Agents (e.g. Trae IDE Agent, custom agents).
+> This document describes the bidirectional integration architecture, calling interfaces, and fix loop between the Taichi test orchestration framework and AI Agents (e.g. Trae IDE Agent, custom agents).
 
 ## 1. Overview
 
-The integration between taichi and AI Agents is **bidirectional**, with the two directions complementing each other to form a fully automated closed loop of "test → analyze → fix → regression". The failure context (`Context`) serves as the information exchange contract between both sides.
+The integration between Taichi and AI Agents is **bidirectional**, with the two directions complementing each other to form a fully automated closed loop of "test → analyze → fix → regression". The failure context (`Context`) serves as the information exchange contract between both sides.
 
 ### Direction 1: taichi as MCP Server called by AI Agent (Agent-driven)
 
@@ -14,19 +14,19 @@ The AI Agent takes the lead, calling taichi-exposed MCP tools on demand to run t
 
 - Applicable: Agent workflows that need to flexibly trigger tests, where the Agent has full analyze-fix capability
 - Protocol: MCP (Model Context Protocol) or CLI subprocess invocation
-- Information flow: Agent → taichi (call tools) → taichi returns results → Agent decides
+- Information flow: Agent → taichi (call tools) → Taichi returns results → Agent decides
 
-### Direction 2: taichi calls AI Agent for fixes during orchestration (taichi-driven copilot mode)
+### Direction 2: Taichi calls AI Agent for fixes during orchestration (taichi-driven copilot mode)
 
 Taichi takes the lead, proactively calling the AI Agent via the `agent.Invoker` interface for analysis and fixes on test failure, then auto-running regression, looping until passing or exhausting rounds.
 
-- Applicable: CI / command-line scenarios where taichi should self-drive the "test-fix-regression" loop
+- Applicable: CI / command-line scenarios where Taichi should self-drive the "test-fix-regression" loop
 - Protocol: CLI (stdin/stdout JSON) or HTTP API
-- Information flow: taichi → Agent (pass `Context`) → Agent returns `FixResult` → taichi applies and regresses
+- Information flow: taichi → Agent (pass `Context`) → Agent returns `FixResult` → Taichi applies and regresses
 
 ### Failure Context: Information Exchange Contract
 
-Regardless of direction, taichi and the Agent use `Context` JSON as the standard carrier for failure information, and `FixResult` JSON as the standard carrier for fix output. Both are defined in:
+Regardless of direction, Taichi and the Agent use `Context` JSON as the standard carrier for failure information, and `FixResult` JSON as the standard carrier for fix output. Both are defined in:
 
 - `pkg/failure/failure.go`: `Context` / `FailedCase`
 - `pkg/agent/agent.go`: `FixResult` / `FixMode` / `Invoker` interface
@@ -302,7 +302,7 @@ Taichi applies the Agent's fix output via `agent.PatchApplier`, supporting two m
 
 ### 6.1 patch mode
 
-The Agent generates a unified diff patch; taichi applies it to the project source.
+The Agent generates a unified diff patch; Taichi applies it to the project source.
 
 - **Application method**: prefer `git apply --whitespace=fix`, fall back to `patch -p1 --no-backup-if-mismatch` on failure
 - **Path resolution**: paths in the patch have `a/` `b/` prefixes (git diff style), resolved relative to `project_root`
@@ -322,11 +322,11 @@ The Agent generates a unified diff patch; taichi applies it to the project sourc
 
 ### 6.2 direct mode
 
-The Agent directly modifies source files via file editing tools; taichi only verifies the modification is valid (file exists and is readable, not a directory).
+The Agent directly modifies source files via file editing tools; Taichi only verifies the modification is valid (file exists and is readable, not a directory).
 
-- **Applicable**: Agent has file editing capability (e.g. in-IDE Agent)
-- **Verification**: taichi calls `PatchApplier.VerifyDirectFix` to check the `modified_files` list
-- **No write intervention**: taichi does not modify any files, only validates
+- **Applicable**: Agents with file editing capability (e.g. in-IDE Agent)
+- **Verification**: Taichi calls `PatchApplier.VerifyDirectFix` to check the `modified_files` list
+- **No write intervention**: Taichi does not modify any files, only validates
 
 `FixResult` example:
 
@@ -343,7 +343,7 @@ The Agent directly modifies source files via file editing tools; taichi only ver
 
 ## 7. Failure Context Format
 
-`Context` is the information exchange contract between taichi ↔ AI Agent, defined in [`pkg/failure/failure.go`](../pkg/failure/failure.go).
+`Context` is the information exchange contract between Taichi ↔ AI Agent, defined in [`pkg/failure/failure.go`](../pkg/failure/failure.go).
 
 ### 7.1 JSON Structure
 
@@ -390,7 +390,7 @@ The Agent directly modifies source files via file editing tools; taichi only ver
 
 ### 7.3 Generation and Consumption
 
-- **Generation**: When tests have failures, taichi builds from the test result snapshot via `failure.FromResults`, written to `reports/failures-round-<N>-<timestamp>.json` via `WriteToFile`
+- **Generation**: When tests have failures, Taichi builds from the test result snapshot via `failure.FromResults`, written to `reports/failures-round-<N>-<timestamp>.json` via `WriteToFile`
 - **Consumption**: Agent reads via file path, or receives via `CLIInvoker` stdin / `HTTPInvoker` body
 - **Serializable**: `Context` implements JSON serialization/deserialization; `ReadFromFile` can restore from a file
 

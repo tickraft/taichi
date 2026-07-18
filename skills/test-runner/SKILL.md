@@ -1,17 +1,17 @@
 ---
 name: "taichi-test-runner"
-description: "Executes automated tests via the taichi CLI or MCP Server. Invoke when the user requests running a taichi test orchestration, executing project tests, viewing a test result summary, or triggering a test run within an AI Agent workflow. Inputs are the config file path, project name, skill filter, and timeout; the output is a structured test result summary (passed/failed/skipped counts, duration, per-skill results)."
+description: "Executes automated tests via the Taichi CLI or MCP Server. Invoke when the user requests running a Taichi test orchestration, executing project tests, viewing a test result summary, or triggering a test run within an AI Agent workflow. Inputs are the config file path, project name, skill filter, and timeout; the output is a structured test result summary (passed/failed/skipped counts, duration, per-skill results)."
 ---
 
 > 🌐 Languages: [English](SKILL.md) | [中文](SKILL.zh.md)
 
-# taichi Test Runner Skill
+# Taichi Test Runner Skill
 
 ## 1. Overview
 
-This Skill lets an AI Agent execute a complete automated test orchestration via taichi. taichi is a general-purpose test orchestration framework: it reads a config file describing the project under test, environments, and skills, then orchestrates a full test run and produces JSON / JUnit XML / human-readable summary reports.
+This Skill lets an AI Agent execute a complete automated test orchestration via Taichi. Taichi is a general-purpose test orchestration framework: it reads a config file describing the project under test, environments, and skills, then orchestrates a full test run and produces JSON / JUnit XML / human-readable summary reports.
 
-This Skill is the "test execution" stage of the taichi ↔ AI Agent bidirectional integration loop, producing `TestResults` for downstream failure analysis and fix consumption.
+This Skill is the "test execution" stage of the Taichi ↔ AI Agent bidirectional integration loop, producing `TestResults` for downstream failure analysis and fix consumption.
 
 ## 2. When to Invoke This Skill
 
@@ -150,7 +150,7 @@ The result is also written as a JSON file to `reports/<project>-<timestamp>.json
 
 ## 6. Handoff with Failure Context
 
-When `summary.failed > 0`, taichi generates a `failure.Context` JSON file in the `reports/` directory (named like `failures-round-1-<timestamp>.json`) for `taichi-failure-analyzer` to consume. After the test finishes, the Agent should check the exit code and `summary.failed`:
+When `summary.failed > 0`, Taichi generates a `failure.Context` JSON file in the `reports/` directory (named like `failures-round-1-<timestamp>.json`) for `taichi-failure-analyzer` to consume. After the test finishes, the Agent should check the exit code and `summary.failed`:
 
 - `failed == 0`: Tests passed; no further action needed
 - `failed > 0`: Call `taichi-failure-analyzer` to read the failure context for analysis
