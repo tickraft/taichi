@@ -67,7 +67,7 @@ If both frontend and backend signals exist (e.g. monorepo), generate multiple pr
 |-------|-----------------|
 | `project_name` | Go: last segment of `go.mod` module path; Node: `name` field of `package.json`; others: root directory name |
 | `project.root` | Project root path relative to the `taichi.yaml` output location |
-| `build_target` | Go: `./cmd/<project_name>` or scan `cmd/` subdirectories; Node: not needed |
+| `build` | Go: `go build -o bin/<project_name> ./cmd/<project_name>` (or scan `cmd/` subdirectories); also accepts any shell command via `sh -c` (e.g. `make build`); Node: not needed |
 | `binary` | Go: `bin/<project_name>`; Node: not needed |
 | `config_path` | Prefer `configs/config.yaml`, then `config.yaml`, `configs/config.yml`, `configs/<project_name>.yaml` |
 | `config_flag` | Go: `--config`; Node: extract from `scripts.start`, default `--config` |
@@ -227,7 +227,7 @@ envs:
   <project_name>-backend:
     kind: backend.go
     binary: bin/<project_name>
-    build_target: ./cmd/<project_name>
+    build: go build -o bin/<project_name> ./cmd/<project_name>
     config_path: configs/config.yaml
     config_flag: --config
     addr_flag: --addr
@@ -383,7 +383,7 @@ When the `base_url` parameter is specified, omit startup-related fields in env:
 ```yaml
 envs:
   <project_name>-external:
-    kind: backend.go           # kind is still required, but binary/build_target can be omitted
+    kind: backend.go           # kind is still required, but binary/build can be omitted
     base_url: http://localhost:8080
     health_path: /api/v1/health
 ```

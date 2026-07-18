@@ -10,7 +10,7 @@
 #   taichi run -c examples/taichi.yaml -s api,grpc      # filter by skill
 #
 # Prerequisites per project:
-#   go-buggy-backend:      cd go-buggy-backend && make build
+#   go-buggy-backend:      (none — taichi runs `make all` via the env's build field)
 #   python-fastapi-buggy:  pip install -r python-fastapi-buggy/requirements.txt
 #   node-express-buggy:    cd node-express-buggy && npm install
 #   frontend-vite-buggy:   cd frontend-vite-buggy && npm install
@@ -47,7 +47,7 @@ envs:
   go-backend-buggy:
     kind: backend.go
     binary: bin/go-buggy-backend
-    build_target: .
+    build: go build -o bin/go-buggy-backend .
     addr_flag: --addr
     health_path: /api/v1/health
     healthy_timeout: 30s

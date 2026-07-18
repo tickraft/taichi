@@ -242,6 +242,8 @@ Agent 脚本协议：
 		"env.frontend.start_failed":    "启动前端 %q 失败",
 		"env.frontend.not_ready":       "前端 %q 在 60s 内未就绪",
 		"env.frontend.cmd_empty":       "前端环境 %q: command 为空",
+		"env.frontend.build_empty":     "环境 %q: build 为空或无法解析",
+		"env.frontend.build_failed":    "环境 %q: build 执行失败",
 		"env.unknown_kind":             "未知的环境类型 %q",
 
 		// ===== agent errors =====

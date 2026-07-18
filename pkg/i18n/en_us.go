@@ -241,6 +241,8 @@ Agent script protocol:
 		"env.frontend.start_failed":    "start frontend %q",
 		"env.frontend.not_ready":       "frontend %q did not become ready within 60s",
 		"env.frontend.cmd_empty":       "frontend env %q: command is empty",
+		"env.frontend.build_empty":     "env %q: build is empty or unparseable",
+		"env.frontend.build_failed":    "env %q: build failed",
 		"env.unknown_kind":             "unknown env kind %q",
 
 		// ===== agent errors =====

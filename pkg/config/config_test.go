@@ -45,7 +45,7 @@ envs:
   tickraft-backend:
     kind: backend.go
     binary: bin/tickraft
-    build_target: ./cmd/tickraft
+    build: go build -o bin/tickraft ./cmd/tickraft
     config_path: configs/config.yaml
     config_flag: --config
     addr_flag: --addr
@@ -127,8 +127,8 @@ locale: zh-CN
 	if backend.BinaryPath != "bin/tickraft" {
 		t.Errorf("backend binary = %q, want %q", backend.BinaryPath, "bin/tickraft")
 	}
-	if backend.BuildTarget != "./cmd/tickraft" {
-		t.Errorf("backend build_target = %q, want %q", backend.BuildTarget, "./cmd/tickraft")
+	if backend.Build != "go build -o bin/tickraft ./cmd/tickraft" {
+		t.Errorf("backend build = %q, want %q", backend.Build, "go build -o bin/tickraft ./cmd/tickraft")
 	}
 	if backend.ConfigPath != "configs/config.yaml" {
 		t.Errorf("backend config_path = %q, want %q", backend.ConfigPath, "configs/config.yaml")
@@ -263,7 +263,7 @@ func TestLoadJSON(t *testing.T) {
     "tickraft-backend": {
       "kind": "backend.go",
       "binary": "bin/tickraft",
-      "build_target": "./cmd/tickraft",
+      "build": "./cmd/tickraft",
       "config_path": "configs/config.yaml",
       "config_flag": "--config",
       "addr_flag": "--addr",
@@ -339,8 +339,8 @@ func TestLoadJSON(t *testing.T) {
 	if env.BinaryPath != "bin/tickraft" {
 		t.Errorf("env binary = %q, want %q", env.BinaryPath, "bin/tickraft")
 	}
-	if env.BuildTarget != "./cmd/tickraft" {
-		t.Errorf("env build_target = %q, want %q", env.BuildTarget, "./cmd/tickraft")
+	if env.Build != "./cmd/tickraft" {
+		t.Errorf("env build = %q, want %q", env.Build, "./cmd/tickraft")
 	}
 	if env.HealthyTimeout != "45s" {
 		t.Errorf("env healthy_timeout = %q, want %q", env.HealthyTimeout, "45s")

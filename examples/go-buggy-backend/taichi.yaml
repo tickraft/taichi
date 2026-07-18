@@ -15,7 +15,7 @@ envs:
   go-backend-buggy:
     kind: backend.go
     binary: bin/go-buggy-backend
-    build_target: .
+    build: make all
     addr_flag: --addr
     health_path: /api/v1/health
     healthy_timeout: 30s

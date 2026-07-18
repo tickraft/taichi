@@ -51,7 +51,6 @@ type Spec struct {
 
 	// Backend fields (used when Kind=backend.*).
 	BinaryPath     string
-	BuildTarget    string
 	ConfigPath     string
 	ConfigFlag     string
 	AddrFlag       string
@@ -65,6 +64,11 @@ type Spec struct {
 	Cwd       string
 	ReadyURL  string
 	ReadyText string
+
+	// Build is the pre-start build step — a shell command executed via `sh -c`.
+	// For backend.go it runs in the project root; for custom/frontend.* it runs
+	// in Cwd before Command launches. Empty means no build step.
+	Build string
 }
 
 // NewSpec builds an Spec from a config.Env.
@@ -75,7 +79,7 @@ func NewSpec(name string, e config.Env) Spec {
 		Port:           e.Port,
 		BaseURL:        e.BaseURL,
 		BinaryPath:     e.BinaryPath,
-		BuildTarget:    e.BuildTarget,
+		Build:          e.Build,
 		ConfigPath:     e.ConfigPath,
 		ConfigFlag:     e.ConfigFlag,
 		AddrFlag:       e.AddrFlag,
@@ -131,7 +135,7 @@ type backend struct {
 func newBackend(spec Spec, projectRoot string) *backend {
 	cfg := framework.ServiceConfig{
 		BinaryPath:     spec.BinaryPath,
-		BuildTarget:    spec.BuildTarget,
+		Build:          spec.Build,
 		ConfigPath:     spec.ConfigPath,
 		ConfigFlag:     spec.ConfigFlag,
 		AddrFlag:       spec.AddrFlag,
@@ -210,6 +214,17 @@ func (f *processEnv) Start(ctx context.Context) (string, error) {
 		return "", errors.New(i18n.T("env.frontend.cmd_empty", f.spec.Name))
 	}
 
+	// Run the optional build step before launching the service.
+	// Build is used for projects whose source must be compiled before
+	// running (e.g. Maven, cargo, npm run build). It runs in the resolved Cwd.
+	// Build failures are propagated: a failing build means the service cannot
+	// be in a known-good state, so we abort the start.
+	if f.spec.Build != "" {
+		if err := f.runBuildCommand(ctx); err != nil {
+			return "", err
+		}
+	}
+
 	logPath, logFile, err := f.openLog()
 	if err != nil {
 		return "", err
@@ -251,6 +266,38 @@ func (f *processEnv) Start(ctx context.Context) (string, error) {
 	}
 	f.baseURL = baseURL
 	return baseURL, nil
+}
+
+// runBuildCommand executes the pre-start build command in the resolved Cwd.
+// The command runs via `sh -c` so shell features (pipes, &&, env vars) are
+// available. Build output (stdout+stderr) is inherited by the parent process
+// so the user can see the build progress. Returns an error wrapping the build
+// output if the command exits non-zero.
+func (f *processEnv) runBuildCommand(ctx context.Context) error {
+	if strings.TrimSpace(f.spec.Build) == "" {
+		return errors.New(i18n.T("env.frontend.build_empty", f.spec.Name))
+	}
+	cmd := exec.CommandContext(ctx, "sh", "-c", f.spec.Build)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	// Resolve cwd using the same rules as the service command.
+	switch {
+	case f.spec.Cwd == "":
+	case filepath.IsAbs(f.spec.Cwd):
+		cmd.Dir = f.spec.Cwd
+	case f.projectRoot != "":
+		cmd.Dir = filepath.Join(f.projectRoot, f.spec.Cwd)
+	default:
+		cmd.Dir = f.spec.Cwd
+	}
+	if len(f.spec.Env) > 0 {
+		cmd.Env = append(os.Environ(), f.spec.Env...)
+	}
+	cmd.WaitDelay = 30 * time.Second
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("%s: %w", i18n.T("env.frontend.build_failed", f.spec.Name), err)
+	}
+	return nil
 }
 
 func (f *processEnv) waitForReady(ctx context.Context) (string, error) {

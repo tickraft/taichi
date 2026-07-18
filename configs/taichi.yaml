@@ -24,8 +24,8 @@ projects:
 envs:
   tickraft-backend:
     kind: backend.go
-    binary: bin/tickraft          # Relative to project root; auto `go build` if missing
-    build_target: ./cmd/tickraft  # go build target
+    binary: bin/tickraft          # Relative to project root; rebuilt on every Start when build is set
+    build: go build -o bin/tickraft ./cmd/tickraft  # shell command run via `sh -c` in project root; supports any build command (go build, make, etc.). Always runs to pick up source changes. Empty = binary must already exist
     config_path: configs/config.yaml
     config_flag: --config
     addr_flag: --addr

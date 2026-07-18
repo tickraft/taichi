@@ -31,7 +31,7 @@ func TestNewSpec(t *testing.T) {
 			Port:           8080,
 			BaseURL:        "http://localhost:8080",
 			BinaryPath:     "bin/tickraft",
-			BuildTarget:    "./cmd/tickraft",
+			Build:          "./cmd/tickraft",
 			ConfigPath:     "configs/config.yaml",
 			ConfigFlag:     "--config",
 			AddrFlag:       "--addr",
@@ -61,8 +61,8 @@ func TestNewSpec(t *testing.T) {
 		if got.BinaryPath != "bin/tickraft" {
 			t.Errorf("BinaryPath = %q, want %q", got.BinaryPath, "bin/tickraft")
 		}
-		if got.BuildTarget != "./cmd/tickraft" {
-			t.Errorf("BuildTarget = %q, want %q", got.BuildTarget, "./cmd/tickraft")
+		if got.Build != "./cmd/tickraft" {
+			t.Errorf("Build = %q, want %q", got.Build, "./cmd/tickraft")
 		}
 		if got.ConfigPath != "configs/config.yaml" {
 			t.Errorf("ConfigPath = %q, want %q", got.ConfigPath, "configs/config.yaml")
@@ -902,5 +902,193 @@ func TestProcessEnv_ReadyTimeoutConfigurable(t *testing.T) {
 	}
 	if elapsed >= time.Second {
 		t.Errorf("waitForReady took %s, want < 1s (HealthyTimeout=200ms should be respected, not the 60s default)", elapsed)
+	}
+}
+
+// =====================================================================
+// processEnv: Build (pre-start build step)
+// =====================================================================
+
+// writeShScript writes a /bin/sh script to dir with the given body and makes
+// it executable. Returns the absolute path.
+func writeShScript(t *testing.T, dir, name, body string) string {
+	t.Helper()
+	p := filepath.Join(dir, name)
+	if err := os.WriteFile(p, []byte("#!/bin/sh\n"+body), 0o755); err != nil {
+		t.Fatalf("write script %s: %v", p, err)
+	}
+	if err := os.Chmod(p, 0o755); err != nil {
+		t.Fatalf("chmod script %s: %v", p, err)
+	}
+	return p
+}
+
+// TestProcessEnv_BuildRunsBeforeStart verifies that Build is
+// executed before the service command, and that a marker file written by the
+// build command is visible by the time Start completes.
+func TestProcessEnv_BuildRunsBeforeStart(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping subprocess test in short mode")
+	}
+	srv := startReadyServer(t, "ready")
+	defer srv.Close()
+
+	root := t.TempDir()
+	marker := filepath.Join(root, "build-marker")
+	// Build writes a marker file; the service sleeps while readiness
+	// is detected via the httptest server.
+	buildScript := writeShScript(t, root, "build.sh",
+		"echo built > "+marker+"\n")
+
+	f := newProcessEnv(Spec{
+		Kind:      config.EnvKindCustom,
+		Name:      "with-build",
+		Command:   "sleep 30",
+		Build:     buildScript,
+		ReadyURL:  srv.URL,
+		ReadyText: "ready",
+		Cwd:       root,
+	}, root)
+
+	if _, err := f.Start(context.Background()); err != nil {
+		t.Fatalf("Start returned error: %v", err)
+	}
+	defer f.Stop(context.Background())
+
+	// The marker file must exist, proving the build step ran.
+	data, err := os.ReadFile(marker)
+	if err != nil {
+		t.Fatalf("build marker not created: %v", err)
+	}
+	if strings.TrimSpace(string(data)) != "built" {
+		t.Errorf("marker content = %q, want %q", strings.TrimSpace(string(data)), "built")
+	}
+}
+
+// TestProcessEnv_BuildFailureAbortsStart verifies that a failing
+// Build prevents the service from being launched.
+func TestProcessEnv_BuildFailureAbortsStart(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping subprocess test in short mode")
+	}
+	root := t.TempDir()
+	// A build command that exits non-zero.
+	buildScript := writeShScript(t, root, "fail-build.sh",
+		"echo 'build error' >&2\nexit 1\n")
+
+	// readyURL points to a server that should NEVER be polled because the
+	// build fails first. Use a server we control to detect if it was polled.
+	polled := make(chan struct{}, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		polled <- struct{}{}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	f := newProcessEnv(Spec{
+		Kind:     config.EnvKindCustom,
+		Name:     "bad-build",
+		Command:  "sleep 30",
+		Build:    buildScript,
+		ReadyURL: srv.URL,
+		Cwd:      root,
+	}, root)
+
+	_, err := f.Start(context.Background())
+	if err == nil {
+		t.Fatal("expected Start to fail when Build fails, got nil")
+	}
+	if !strings.Contains(err.Error(), "bad-build") {
+		t.Errorf("error %q does not mention env name", err)
+	}
+	if !strings.Contains(err.Error(), "build failed") {
+		t.Errorf("error %q does not mention build failure", err)
+	}
+	// The ready URL must not have been polled: build aborted before launch.
+	select {
+	case <-polled:
+		t.Errorf("ready URL was polled despite build failure; service should not have started")
+	case <-time.After(100 * time.Millisecond):
+		// expected: no poll happened
+	}
+	if f.cmd != nil {
+		t.Errorf("cmd should be nil after build failure, got %v", f.cmd)
+	}
+}
+
+// TestProcessEnv_BuildEmptySkipsBuild verifies that an empty
+// Build does not run any build step (regression test for the default
+// path where no build is configured).
+func TestProcessEnv_BuildEmptySkipsBuild(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping subprocess test in short mode")
+	}
+	srv := startReadyServer(t, "ready")
+	defer srv.Close()
+
+	root := t.TempDir()
+	// If a build step were executed, it would write to this path.
+	marker := filepath.Join(root, "unexpected-build-marker")
+
+	f := newProcessEnv(Spec{
+		Kind:      config.EnvKindCustom,
+		Name:      "no-build",
+		Command:   "sleep 30",
+		ReadyURL:  srv.URL,
+		ReadyText: "ready",
+		// Build intentionally empty
+	}, root)
+
+	if _, err := f.Start(context.Background()); err != nil {
+		t.Fatalf("Start returned error: %v", err)
+	}
+	defer f.Stop(context.Background())
+
+	if _, err := os.Stat(marker); err == nil {
+		t.Errorf("unexpected build marker exists; build step should not have run")
+	}
+}
+
+// TestProcessEnv_BuildResolvesCwd verifies that Build runs in
+// the resolved Cwd (relative to projectRoot).
+func TestProcessEnv_BuildResolvesCwd(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping subprocess test in short mode")
+	}
+	srv := startReadyServer(t, "ready")
+	defer srv.Close()
+
+	root := t.TempDir()
+	sub := filepath.Join(root, "subdir")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	// The build script writes its pwd to a marker file in the subdirectory.
+	marker := filepath.Join(sub, "pwd.txt")
+	buildScript := writeShScript(t, sub, "build.sh",
+		"pwd > "+marker+"\n")
+
+	f := newProcessEnv(Spec{
+		Kind:      config.EnvKindCustom,
+		Name:      "rel-cwd",
+		Command:   "sleep 30",
+		Build:     buildScript, // absolute path; Cwd still resolves the working dir
+		ReadyURL:  srv.URL,
+		ReadyText: "ready",
+		Cwd:       "subdir", // relative to projectRoot
+	}, root)
+
+	if _, err := f.Start(context.Background()); err != nil {
+		t.Fatalf("Start returned error: %v", err)
+	}
+	defer f.Stop(context.Background())
+
+	data, err := os.ReadFile(marker)
+	if err != nil {
+		t.Fatalf("marker not created: %v", err)
+	}
+	got := strings.TrimSpace(string(data))
+	if got != sub {
+		t.Errorf("build ran in %q, want %q", got, sub)
 	}
 }

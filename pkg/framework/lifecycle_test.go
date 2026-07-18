@@ -2,6 +2,7 @@ package framework
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -128,24 +129,24 @@ func TestFindFreePortReturnsDistinct(t *testing.T) {
 
 func TestNewServiceLifecycle(t *testing.T) {
 	cfg := ServiceConfig{
-		BinaryPath:  "/usr/bin/true",
-		BuildTarget: "./cmd/foo",
-		ConfigPath:  "configs/test.yaml",
-		ConfigFlag:  "--config",
-		AddrFlag:    "--addr",
-		Port:        8080,
-		HealthPath:  "/health",
-		ReportsDir:  "reports",
-		Args:        []string{"--verbose"},
-		Env:         []string{"FOO=bar"},
+		BinaryPath: "/usr/bin/true",
+		Build:      "go build -o bin/foo ./cmd/foo",
+		ConfigPath: "configs/test.yaml",
+		ConfigFlag: "--config",
+		AddrFlag:   "--addr",
+		Port:       8080,
+		HealthPath: "/health",
+		ReportsDir: "reports",
+		Args:       []string{"--verbose"},
+		Env:        []string{"FOO=bar"},
 	}
 	s := NewServiceLifecycle(cfg)
 	got := s.Config()
 	if got.BinaryPath != cfg.BinaryPath {
 		t.Errorf("BinaryPath mismatch: got %s, want %s", got.BinaryPath, cfg.BinaryPath)
 	}
-	if got.BuildTarget != cfg.BuildTarget {
-		t.Errorf("BuildTarget mismatch: got %s, want %s", got.BuildTarget, cfg.BuildTarget)
+	if got.Build != cfg.Build {
+		t.Errorf("Build mismatch: got %s, want %s", got.Build, cfg.Build)
 	}
 	if got.ConfigPath != cfg.ConfigPath {
 		t.Errorf("ConfigPath mismatch: got %s, want %s", got.ConfigPath, cfg.ConfigPath)
@@ -365,5 +366,186 @@ func TestWaitForHealthyFailingCheck(t *testing.T) {
 	// After a failed Start, BaseURL should be empty (cleanup happened).
 	if got := s.BaseURL(); got != "" {
 		t.Fatalf("expected empty BaseURL after failed Start, got %q", got)
+	}
+}
+
+// =====================================================================
+// ensureBinary rebuild behavior
+// =====================================================================
+
+// writeTestServerProject writes the test server source to a temp dir and
+// returns the dir and the absolute path for the not-yet-built binary.
+func writeTestServerProject(t *testing.T) (dir, binaryPath string) {
+	t.Helper()
+	dir = t.TempDir()
+	srcPath := filepath.Join(dir, "main.go")
+	if err := os.WriteFile(srcPath, []byte(testServerSrc), 0o644); err != nil {
+		t.Fatalf("write main.go: %v", err)
+	}
+	goMod := "module testserver\n\ngo 1.21\n"
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(goMod), 0o644); err != nil {
+		t.Fatalf("write go.mod: %v", err)
+	}
+	binaryPath = filepath.Join(dir, "testserver")
+	return dir, binaryPath
+}
+
+// TestEnsureBinary_AlwaysRebuildsWithBuild verifies that when
+// Build is configured, ensureBinary always rebuilds even if the binary
+// already exists. This is the core fix for the copilot regression bug: a
+// stale binary must not be reused after source changes.
+func TestEnsureBinary_AlwaysRebuildsWithBuild(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping subprocess build in short mode")
+	}
+	dir, binaryPath := writeTestServerProject(t)
+	s := NewServiceLifecycle(ServiceConfig{
+		BinaryPath: binaryPath,
+		Build:      "go build -o " + binaryPath + " .",
+	})
+	s.SetProjectRoot(dir)
+
+	// First call: binary does not exist yet → must build.
+	start := time.Now()
+	if err := s.ensureBinary(); err != nil {
+		t.Fatalf("first ensureBinary: %v", err)
+	}
+	if _, err := os.Stat(binaryPath); err != nil {
+		t.Fatalf("binary not created after first ensureBinary: %v", err)
+	}
+	firstMtime, _ := os.Stat(binaryPath)
+
+	// Wait a moment so that a rebuild would produce a newer mtime.
+	time.Sleep(50 * time.Millisecond)
+
+	// Second call: binary already exists but Build is set → must
+	// STILL rebuild. The previous behavior was to skip; this is the bug.
+	if err := s.ensureBinary(); err != nil {
+		t.Fatalf("second ensureBinary: %v", err)
+	}
+	secondMtime, err := os.Stat(binaryPath)
+	if err != nil {
+		t.Fatalf("binary missing after second ensureBinary: %v", err)
+	}
+	if !secondMtime.ModTime().After(firstMtime.ModTime()) {
+		t.Errorf("expected binary to be rebuilt (mtime advanced); first=%v second=%v",
+			firstMtime.ModTime(), secondMtime.ModTime())
+	}
+	_ = start
+}
+
+// TestEnsureBinary_NoBuildRequiresExistingBinary verifies that when
+// Build is empty, ensureBinary only checks the binary exists.
+func TestEnsureBinary_NoBuildRequiresExistingBinary(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping subprocess build in short mode")
+	}
+	dir, binaryPath := writeTestServerProject(t)
+	s := NewServiceLifecycle(ServiceConfig{
+		BinaryPath: binaryPath,
+		// Build intentionally empty
+	})
+	s.SetProjectRoot(dir)
+
+	// Binary does not exist yet → error.
+	err := s.ensureBinary()
+	if err == nil {
+		t.Fatal("expected error when binary missing and Build empty, got nil")
+	}
+	if !strings.Contains(err.Error(), "not found") {
+		t.Errorf("error %q does not mention 'not found'", err)
+	}
+
+	// Build the binary manually, then ensureBinary must pass.
+	build := exec.Command("go", "build", "-o", binaryPath, ".")
+	build.Dir = dir
+	if out, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("go build: %v: %s", err, out)
+	}
+	if err := s.ensureBinary(); err != nil {
+		t.Errorf("ensureBinary failed after binary exists: %v", err)
+	}
+}
+
+// TestEnsureBinary_EmptyBinaryPathErrors verifies that an empty BinaryPath
+// produces an error regardless of Build.
+func TestEnsureBinary_EmptyBinaryPathErrors(t *testing.T) {
+	s := NewServiceLifecycle(ServiceConfig{
+		BinaryPath: "",
+		Build:      "go build .",
+	})
+	err := s.ensureBinary()
+	if err == nil {
+		t.Fatal("expected error when BinaryPath is empty, got nil")
+	}
+	if !strings.Contains(err.Error(), "binary path is empty") {
+		t.Errorf("error %q does not mention 'binary path is empty'", err)
+	}
+}
+
+// TestStartWithBuildRebuildsSourceChange verifies the end-to-end
+// scenario of the copilot regression bug: after a source change, a second
+// Start must run the new binary, not the cached one.
+func TestStartWithBuildRebuildsSourceChange(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping subprocess build in short mode")
+	}
+	dir, binaryPath := writeTestServerProject(t)
+	cfg := ServiceConfig{
+		BinaryPath:     binaryPath,
+		Build:          "go build -o " + binaryPath + " .",
+		AddrFlag:       "--addr",
+		HealthPath:     "/health",
+		ReportsDir:     filepath.Join(t.TempDir(), "reports"),
+		HealthyTimeout: 10 * time.Second,
+	}
+	s := NewServiceLifecycle(cfg)
+	s.SetProjectRoot(dir)
+
+	// First Start: builds and launches the server.
+	if err := s.Start(); err != nil {
+		t.Fatalf("first Start: %v", err)
+	}
+	firstBase := s.BaseURL()
+	resp, err := http.Get(firstBase + "/health")
+	if err != nil {
+		t.Fatalf("first health check: %v", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("first health status = %d, want 200", resp.StatusCode)
+	}
+	if err := s.Stop(); err != nil {
+		t.Fatalf("first Stop: %v", err)
+	}
+
+	// Modify the source: change the /health response body so we can detect
+	// the new binary is actually loaded. The default handler writes "ok";
+	// we change it to "ok-v2".
+	srcPath := filepath.Join(dir, "main.go")
+	newSrc := strings.Replace(testServerSrc, `fmt.Fprintln(w, "ok")`, `fmt.Fprintln(w, "ok-v2")`, 1)
+	if err := os.WriteFile(srcPath, []byte(newSrc), 0o644); err != nil {
+		t.Fatalf("rewrite main.go: %v", err)
+	}
+
+	// Second Start: must rebuild the binary (the bug would skip this) and
+	// launch the new version.
+	if err := s.Start(); err != nil {
+		t.Fatalf("second Start: %v", err)
+	}
+	defer s.Stop()
+	secondBase := s.BaseURL()
+	resp, err = http.Get(secondBase + "/health")
+	if err != nil {
+		t.Fatalf("second health check: %v", err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("second health status = %d, want 200", resp.StatusCode)
+	}
+	if strings.TrimSpace(string(body)) != "ok-v2" {
+		t.Fatalf("second health body = %q, want %q (source change was not rebuilt)",
+			strings.TrimSpace(string(body)), "ok-v2")
 	}
 }
